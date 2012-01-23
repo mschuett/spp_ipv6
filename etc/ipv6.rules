@@ -1,0 +1,127 @@
+# Unusual Neighbor Discovery msgs
+alert icmp any any -> any any (ipv: 6; itype: 130<>138; ttl: <255; \
+    msg:"ICMPv6/NDP msg routed";    sid:124800; rev:1;)
+alert icmp any any -> any any (ipv: 6; itype: 148<>149; ttl: <255; \
+    msg:"ICMPv6/SEND msg routed";   sid:124801; rev:1;)
+alert icmp any any -> any any (ipv: 6; itype: 148<>149; ttl: 255;  \
+    msg:"ICMPv6/SEND msg";          sid:124802; rev:1;)
+alert icmp any any -> any any (ipv: 6; itype: 137; ttl: 255;       \
+    msg:"ICMPv6/NDP Redirect msg";  sid:124803; rev:1;)
+alert icmp any any -> any any (ipv: 6; itype: 138; ttl: 255;       \
+    msg:"ICMPv6 Router Renumbering";sid:124804; rev:1;)
+alert icmp any any -> any any (ipv: 6; itype: 139<>140;            \
+    msg:"ICMPv6 Node Information";  sid:124805; rev:1;)
+
+# ICMPv6 options
+alert icmp any any -> any any (ipv: 6; icmp6_nd;                   \
+    icmp6_nd_option: >10; icmp6_nd_option: <15;                    \
+    msg:"ICMPv6/NDP with SEND option"; sid:124806; rev:1;)
+alert icmp any any -> any any (ipv: 6; icmp6_nd;                   \
+    icmp6_nd_option: 4;                                            \
+    msg:"ICMPv6/NDP with Redirect option"; sid:124807; rev:1;)
+
+# MLD hop limits
+alert icmp any any -> any any (ipv: 6; itype: 130<>132; ttl: >1;   \
+    msg:"ICMPv6/MLD msg with invalid hop limit"; sid:124808; rev:1;)
+alert icmp any any -> any any (ipv: 6; itype: 143; ttl: >1;        \
+    msg:"ICMPv6/MLDv2 msg with invalid hop limit"; sid:124809; rev:1;)
+
+# Unusual extension headers
+alert ip   any any -> any any (ip6_extnum: > 3;                    \
+    msg:"IPv6: many ext. hdrs";     sid:124810; rev:1;)
+alert ip   any any -> any any (ipv: 6; fragbits: M; dsize: <640;   \
+    msg:"IPv6: short fragment";     sid:124811; rev:1;)
+alert ip   any any -> any any (ip6_exthdr: 50;                     \
+    msg:"IPv6+IPsec ESP";           sid:124812; rev:1;)
+alert ip   any any -> any any (ip6_exthdr: 51;                     \
+    msg:"IPv6+IPsec AH";            sid:124813; rev:1;)
+alert ip   any any -> any any (ip6_rh: 0;                          \
+    msg:"IPv6 RH0";                 sid:124814; rev:1;)
+alert ip   any any -> any any (ip6_ext_ordered: !;                 \
+    msg:"IPv6 Extension Headers not in order"; sid:124815; rev:1;)
+
+# Upper layer protocols
+alert udp  any any -> any 547 (ipv: 6;                             \
+    msg:"DHCPv6 request";           sid:124820; rev:1;)
+alert udp  any any -> any 546 (ipv: 6;                             \
+    msg:"DHCPv6 reply";             sid:124821; rev:1;)
+
+# Mobile IPv6
+alert ip   any any -> any any (ip6_rh: 2;                          \
+    msg:"Mobile IPv6: RH2";         sid:124830; rev:1;)
+alert ip   any any -> any any (ip6_option: 0xc9;                   \
+    msg:"Mobile IPv6: Home Address"; sid:124831; rev:1;)
+alert ip   any any -> any any (ip6_exthdr: 0x87;                   \
+    msg:"Mobile IPv6 Ext Hdr";     sid:124832; rev:1;)
+alert icmp any any -> any any (ipv: 6; itype: 144<>147;            \
+    msg:"ICMPv6 Mobile IPv6 msg";  sid:124833; rev:1;)
+alert icmp any any -> any any (icmp6_nd; icmp6_nd_option: 8;       \
+    msg:"ICMPv6/NDP with HomeAgent option"; sid:124834; rev:1;)
+
+# Use of experimental values
+alert ip   any any -> any any (ip6_rh: 253;                        \
+    msg:"Experimental IPv6 routing hdr"; sid:124841; rev:1;)
+alert ip   any any -> any any (ip6_rh: 254;                        \
+    msg:"Experimental IPv6 routing hdr"; sid:124842; rev:1;)
+alert ip   any any -> any any (icmp6_nd; icmp6_nd_option: 253;     \
+    msg:"Experimental ICMPv6/NDP option"; sid:124843; rev:1;)
+alert ip   any any -> any any (icmp6_nd; icmp6_nd_option: 254;     \
+    msg:"Experimental ICMPv6/NDP option"; sid:124844; rev:1;)
+
+# Flooding
+alert icmp any any -> any any (ipv: 6; itype: 134;                 \
+    detection_filter: track by_dst, count 5, seconds 1;            \
+    msg:"ICMPv6/RA flooding";     sid:124850; rev:1;)
+alert icmp any any -> any any (ipv: 6; itype: 135;                 \
+    detection_filter: track by_dst, count 20, seconds 1;           \
+    msg:"ICMPv6/NS flooding";     sid:124851; rev:1;)
+alert icmp any any -> any any (ipv: 6; itype: 136;                 \
+    detection_filter: track by_dst, count 20, seconds 1;           \
+    msg:"ICMPv6/NA flooding";     sid:124852; rev:1;)
+
+# signs of THC toolkit
+alert icmp any any -> any any (ipv: 6; icmp_id: 57005;             \
+    msg:"ICMPv6 ID 0xdead (THC?)"; sid:124860; rev:1;)
+# other signs are
+# [248:14:1] ipv6: option lengths != ext length,
+# [123:8:1]  frag3: Fragmentation overlap, in combination with
+# [123:10:1] frag3: Bogus # fragmentation packet. Possible BSD attack.
+
+# most of these rules are prone to flooding, so set up a few event filters:
+event_filter gen_id 1, sig_id 124800, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124801, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124802, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124803, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124804, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124805, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124806, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124807, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124810, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124811, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124812, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124813, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124814, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124815, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124850, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124851, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124852, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 1, sig_id 124860, type limit, track by_dst, count 1, seconds 60
+
+# event filters for the preprocessor alerts
+event_filter gen_id 248, sig_id  1, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 248, sig_id  2, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 248, sig_id  7, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 248, sig_id  9, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 248, sig_id 12, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 248, sig_id 13, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 248, sig_id 14, type limit, track by_dst, count 1, seconds 60
+
+# additional rate limits for decoder alerts
+# fragmentation overlaps
+event_filter gen_id 123, sig_id  8, type limit, track by_dst, count 1, seconds 60
+event_filter gen_id 123, sig_id 10, type limit, track by_dst, count 1, seconds 60
+# IPv6 header includes an undefined option type
+event_filter gen_id 116, sig_id 279, type limit, track by_dst, count 1, seconds 60
+# ICMPv6 router adv. packet with the reachable time field set > 1 hour
+event_filter gen_id 116, sig_id 290, type limit, track by_dst, count 1, seconds 60
+
