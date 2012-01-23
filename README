@@ -1,0 +1,9 @@
+IPv6 Plugin for Snort
+=====================
+
+This Snort Plugin contains a preprocessor to monitor IPv6 neighbor discovery
+messages and adds new rule options for IPv6 specific signatures.
+
+For more information see
+ * http://ipv6-ids.de/
+ * http://mschuette.name/wp/snortipv6/
