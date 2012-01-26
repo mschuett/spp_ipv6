@@ -61,7 +61,7 @@ void IPv6_Preproc_Setup(void)
  * Reset Stats
  * (only used when reading multiple PCAP files, cf. README.pcap_readmode)
  */
-static void IPv6_ResetStats(int signal, void *foo)
+static void IPv6_ResetStats(int signal __attribute__((unused)), void *foo __attribute__((unused)))
 {
     struct IPv6_State *context;
     sfPolicyUserPolicySet(ipv6_config, _dpd.getRuntimePolicy());
@@ -73,7 +73,7 @@ static void IPv6_ResetStats(int signal, void *foo)
 /**
  * Print some statistics on snort exit.
  */
-static void IPv6_PrintStats(int exiting)
+static void IPv6_PrintStats(int exiting __attribute__((unused)))
 {
     struct IPv6_State *context;
     sfPolicyUserPolicySet(ipv6_config, _dpd.getRuntimePolicy());
@@ -279,7 +279,7 @@ inline static void IPv6_UpdateStats(const SFSnortPacket *p, struct IPv6_Statisti
 }
 
 /* simple stateless checks of extension headers */
-inline static void IPv6_Process_Extensions(const SFSnortPacket *p, struct IPv6_State *context)
+inline static void IPv6_Process_Extensions(const SFSnortPacket *p, struct IPv6_State *context __attribute__((unused)))
 {
     uint_fast8_t i;
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGBASE,
@@ -335,7 +335,7 @@ inline static void IPv6_Process_Extensions(const SFSnortPacket *p, struct IPv6_S
  *
  * @return void function
  */
-void IPv6_Process(void *pkt, void *snortcontext)
+void IPv6_Process(void *pkt, void *snortcontext __attribute__((unused)))
 {
     PROFILE_VARS;
     SFSnortPacket *p = (SFSnortPacket *) pkt;
@@ -386,7 +386,7 @@ void IPv6_Process(void *pkt, void *snortcontext)
  * Check ICMPv6 ND Options.
  * icmp_hdr_len is givenby caller, because it varies depending on msg type
  */
-inline static void IPv6_Process_ND_Options(const SFSnortPacket *p, struct IPv6_State *context)
+inline static void IPv6_Process_ND_Options(const SFSnortPacket *p, struct IPv6_State *context __attribute__((unused)))
 {
     size_t icmp_hdr_len = ND_hdrlen[p->icmp_header->type];
     size_t len = p->ip_payload_size - icmp_hdr_len;

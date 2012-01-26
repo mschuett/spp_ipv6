@@ -351,7 +351,7 @@ static int IPv6_Rule_KeyCompare(void *l, void *r)
 
 
 /* Rule option evaluation */
-static int IPv6_Rule_Eval(void *raw_packet, const u_int8_t **cursor, void *data)
+static int IPv6_Rule_Eval(void *raw_packet, const u_int8_t **cursor __attribute__((unused)), void *data)
 {
     SFSnortPacket *p = (SFSnortPacket*) raw_packet;
     struct IPv6_RuleOpt_Data *sdata = (struct IPv6_RuleOpt_Data *) data;
