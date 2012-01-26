@@ -1,6 +1,5 @@
 
 #### Compiler and tool definitions shared by all build targets #####
-CC = gcc
 BASICOPTS = -g -fPIC -O1 -Wall
 CONFIGFLAGS = -DSF_WCHAR -DSUP_IP6 -DTARGET_BASED -DPERF_PROFILING -DSNORT_RELOAD -DNORMALIZER -DACTIVE_RESPONSE
 
