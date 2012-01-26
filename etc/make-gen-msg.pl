@@ -8,7 +8,7 @@ use autodie;
 use 5.12.0;
 
 use Data::Dumper;
-my $headerfile = "spp_ipv6_constants.h";
+my $headerfile = "../src/spp_ipv6_constants.h";
 my $mapfile    = "gen-msg.map";
 my $rulesfile  = "preprocessor.rules";
 my $generator_id;
