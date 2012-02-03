@@ -1,12 +1,19 @@
 
 #### Compiler and tool definitions shared by all build targets #####
-BASICOPTS = -g -fPIC -O1 -Wall
+BASICOPTS = -fPIC -O1
 CONFIGFLAGS = -DSF_WCHAR -DSUP_IP6 -DTARGET_BASED -DPERF_PROFILING -DSNORT_RELOAD -DNORMALIZER -DACTIVE_RESPONSE
 
 # Define the target directories.
-TARGETDIR=build
+TARGETDIR = build
+INSTALLFILENAME = lib_ipv6_preproc.so
+INSTALLDIR ?= /usr/lib/snort/snort_dynamicpreprocessor
 
-all: $(TARGETDIR)/spp_ipv6.so
+all: $(TARGETDIR)/lib_ipv6_preproc.so
+
+# For development/debugging
+debug: CONFIGFLAGS += -g3 -gdwarf-2 -Wall -DDEBUG -DDEBUG_MSGS
+
+debug: all
 
 CFLAGS = $(BASICOPTS)
 CPPFLAGS = \
@@ -24,18 +31,21 @@ OBJS =  \
 
 # Link or archive
 SHAREDLIB_FLAGS = -shared 
-$(TARGETDIR)/spp_ipv6.so: $(TARGETDIR) $(OBJS) $(DEPLIBS)
-	$(LINK.c) $(CFLAGS) $(CPPFLAGS) -o $@ $(OBJS) $(SHAREDLIB_FLAGS) $(LDLIBS)
-
+$(TARGETDIR)/lib_ipv6_preproc.so: $(TARGETDIR) $(OBJS) $(DEPLIBS)
+	$(LINK.c) -o $@ $(OBJS) $(SHAREDLIB_FLAGS) $(LDLIBS)
 
 # Compile source files into .o files
 $(TARGETDIR)/%.o: src/%.c
-	$(COMPILE.c) $(CFLAGS) $(CPPFLAGS) -o $@ $<
+	$(COMPILE.c) -o $@ $<
+
+# install
+install: $(TARGETDIR)/lib_ipv6_preproc.so
+	install $(TARGETDIR)/lib_ipv6_preproc.so $(INSTALLDIR)/$(INSTALLFILENAME)
 
 #### Clean target deletes all generated files ####
 clean:
 	rm -f \
-		$(TARGETDIR)/spp_ipv6.so \
+		$(TARGETDIR)/lib_ipv6_preproc.so \
 		$(TARGETDIR)/spp_ipv6.o \
 		$(TARGETDIR)/sf_ip.o \
 		$(TARGETDIR)/sf_dynamic_preproc_lib.o \
@@ -47,8 +57,4 @@ clean:
 $(TARGETDIR):
 	mkdir -p $(TARGETDIR)
 
-
-# Enable dependency checking
-.KEEP_STATE:
-.KEEP_STATE_FILE:.make.state.$(TARGETDIR)
 
