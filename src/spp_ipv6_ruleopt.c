@@ -370,7 +370,7 @@ static int IPv6_Rule_Eval(void *raw_packet, const u_int8_t **cursor __attribute_
     case IPV6_RULETYPE_IPV: {
         uint_fast8_t ipv = GET_IPH_VER(p);
         if (ipv != 6 && ipv != 4) {
-            _dpd.errMsg("buggy Snort version: ip6_ret_ver() uses wrong byte order\n");
+            //_dpd.errMsg("buggy Snort version: ip6_ret_ver() uses wrong byte order\n");
             ipv = ntohl(p->ip6h->vcl) >> 28;
         }
 
