@@ -168,6 +168,10 @@ uint_fast8_t ND_hdrlen[255] = {
 #define SID_IP6_ONLY_PADDING_EXT_TEXT       "ipv6: extension header has only padding options (evasion?)"
 #define SID_IP6_OPTION_LENGTH_ERR           14
 #define SID_IP6_OPTION_LENGTH_ERR_TEXT      "ipv6: option lengths != ext length"
+#define SID_IP6_PADDING_OPT_DATA            15
+#define SID_IP6_PADDING_OPT_DATA_TEXT       "ipv6: PadN option with data != zero"
+#define SID_IP6_CONSEC_PADDING_OPT          16
+#define SID_IP6_CONSEC_PADDING_OPT_TEXT     "ipv6: consecutive padding options"
 
 
 /* TODO:

@@ -26,8 +26,8 @@
 #define SF_PREPROC_INFO_H_
 
 #define MAJOR_VERSION   1
-#define MINOR_VERSION   3
-#define BUILD_VERSION   0
+#define MINOR_VERSION   4
+#define BUILD_VERSION   16
 #define PREPROC_NAME    "IPv6 Preprocessor"
 
 #define DYNAMIC_PREPROC_SETUP   IPv6_Preproc_Setup

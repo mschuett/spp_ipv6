@@ -107,6 +107,7 @@ static void IPv6_PrintStats(int exiting __attribute__((unused)))
     _dpd.logMsg("\nAll hosts in DAD state (%d entries):\n", context->unconfirmed->entry_counter);
     state_host_printlist(context->unconfirmed);
 
+    /*
     size_t size = 0;
     size_t total = 0;
     total += sizeof (*context);
@@ -126,6 +127,7 @@ static void IPv6_PrintStats(int exiting __attribute__((unused)))
 
     _dpd.logMsg("\t==> %6d bytes total (IPv6_Host size: %d bytes)\n",
                 total, sizeof(struct IPv6_Host));
+     */
 }
 
 /**
@@ -303,19 +305,41 @@ inline static void IPv6_Process_Extensions(const SFSnortPacket *p, struct IPv6_S
             u_int8_t *cursor  = (u_int8_t *) (hbh_hdr+1);
             u_int8_t *ext_end = ((u_int8_t *) hbh_hdr) + ext_len;
             bool only_padding = true;
+            bool last_was_padding = false;          // keep state between two options
+            bool last_was_padding_alerted = false;  // alarm only once per packet
+            u_int8_t* c;
 
             while (cursor < ext_end) {
                 struct ip6_opt *opt = (struct ip6_opt*) cursor;
                 switch (opt->ip6o_type) {
                 case 0: // Pad1
+                    if (last_was_padding && !last_was_padding_alerted) {
+                        ALERT(SID_IP6_CONSEC_PADDING_OPT);
+                        last_was_padding_alerted = true;
+                    }
+                    last_was_padding = true;
                     cursor += 1;
                     break;
                 case 1: // PadN
+                    if (last_was_padding && !last_was_padding_alerted) {
+                        ALERT(SID_IP6_CONSEC_PADDING_OPT);
+                        last_was_padding_alerted = true;
+                    }
+                    last_was_padding = true;
+
+                    for(c = cursor+2; c < (cursor + 2 + opt->ip6o_len); c++) {
+                        if (*c != 0) {
+                            ALERT(SID_IP6_PADDING_OPT_DATA);
+                            break;
+                        }
+                    }
+                    
                     cursor += 2 + opt->ip6o_len;
                     break;
                 default: // everything else
-                    cursor += 2 + opt->ip6o_len;
                     only_padding = false;
+                    last_was_padding = false;
+                    cursor += 2 + opt->ip6o_len;
                     break;
                 }
             }
@@ -344,8 +368,8 @@ void IPv6_Process(void *pkt, void *snortcontext __attribute__((unused)))
     sfPolicyUserPolicySet(ipv6_config, _dpd.getRuntimePolicy());
     context = (struct IPv6_State *) sfPolicyUserDataGetCurrent(ipv6_config);
 
-    //DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "IPv6_Process() called, pkt type = %d\n",
-        //(p && p->ip6h) ? p->ip6h->next : 0););
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "IPv6_Process() called, pkt type = %d\n",
+        (p && p->ip6h) ? p->ip6h->next : 0););
 
     context->stat->pkt_seen++;
     /* is the packet and the configuration valid? */
