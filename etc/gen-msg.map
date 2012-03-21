@@ -12,3 +12,5 @@
 248 || 12 || ipv6: mismatch in MAC and NDP source linkaddress option
 248 || 13 || ipv6: extension header has only padding options (evasion?)
 248 || 14 || ipv6: option lengths != ext length
+248 || 15 || ipv6: PadN option with data != zero
+248 || 16 || ipv6: consecutive padding options

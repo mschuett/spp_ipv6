@@ -12,3 +12,5 @@ alert ( msg: "SID_ICMP6_DAD_DOS"; sid: 11; gid: 248; rev: 1; metadata: rule-type
 alert ( msg: "SID_ICMP6_LINKADDR_MISMATCH"; sid: 12; gid: 248; rev: 1; metadata: rule-type preproc, classtype:bad-unknown; )
 alert ( msg: "SID_IP6_ONLY_PADDING_EXT"; sid: 13; gid: 248; rev: 1; metadata: rule-type preproc, classtype:bad-unknown; )
 alert ( msg: "SID_IP6_OPTION_LENGTH_ERR"; sid: 14; gid: 248; rev: 1; metadata: rule-type preproc, classtype:bad-unknown; )
+alert ( msg: "SID_IP6_PADDING_OPT_DATA"; sid: 15; gid: 248; rev: 1; metadata: rule-type preproc, classtype:bad-unknown; )
+alert ( msg: "SID_IP6_CONSEC_PADDING_OPT"; sid: 16; gid: 248; rev: 1; metadata: rule-type preproc, classtype:bad-unknown; )
