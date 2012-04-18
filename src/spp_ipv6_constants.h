@@ -10,8 +10,8 @@
  *
  */
 
-#ifndef CONSTANTS_H
-#define	CONSTANTS_H
+#ifndef _SPP_IPV6_CONSTANTS_H
+#define	_SPP_IPV6_CONSTANTS_H
 
 /**********************************************************************
  ** Protocol Constants                                               **
@@ -166,4 +166,4 @@ struct ICMPv6_RA {
                    _dpd.alertAdd(GEN_ID_IPv6, x, 1, 1, 3, x##_TEXT, 0 ); }
 */
 
-#endif	/* CONSTANTS_H */
+#endif	/* _SPP_IPV6_CONSTANTS_H */

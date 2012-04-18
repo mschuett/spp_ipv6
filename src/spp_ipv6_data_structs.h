@@ -9,8 +9,8 @@
  * 
  */
 
-#ifndef DATASTRUCTS_H
-#define	DATASTRUCTS_H
+#ifndef _SPP_IPV6_DATASTRUCTS_H
+#define	_SPP_IPV6_DATASTRUCTS_H
 #include "spp_ipv6_common.h"
 
 /**********************************************************************
@@ -305,4 +305,4 @@ void del_dad_entry(
 RB_PROTOTYPE(MAC_Entry_data,  MAC_Entry, entries, mac_cmp);
 RB_PROTOTYPE(IPv6_Hosts_data, IPv6_Host, entries, host_cmp);
 
-#endif	/* DATASTRUCTS_H */
+#endif	/* _SPP_IPV6_DATASTRUCTS_H */
