@@ -20,8 +20,13 @@
  *
  */
 
+<<<<<<< HEAD
+#ifndef _SPP_IPV6_COMMON_H
+#define	_SPP_IPV6_COMMON_H
+=======
 #ifndef _SPP_IPV6_H
 #define	_SPP_IPV6_H
+>>>>>>> d3c75260618737d57f8edd18687983944a621490
 
 /**********************************************************************
  ** Includes                                                         **
@@ -33,6 +38,10 @@
 #include <ctype.h>
 #include <string.h>
 #include <sys/queue.h>
+<<<<<<< HEAD
+#include <errno.h>
+=======
+>>>>>>> d3c75260618737d57f8edd18687983944a621490
 
 #ifdef __linux__
 #ifndef __unused
@@ -55,6 +64,12 @@
 #include <netinet/ip6.h>
 #include <netinet/in.h>
 
+<<<<<<< HEAD
+#include "spp_ipv6_constants.h"
+#include "spp_ipv6_data_structs.h"
+
+=======
+>>>>>>> d3c75260618737d57f8edd18687983944a621490
 /* verify string contains a MAC address */
 #define IS_MAC(string) ((string) != NULL                                     \
   && isxdigit((string)[ 0]) && isxdigit((string)[ 1]) && (string)[ 2] == ':' \
@@ -66,6 +81,12 @@
 
 
 /**********************************************************************
+<<<<<<< HEAD
+ ** Function Prototypes                                              **
+ **********************************************************************/
+
+#endif	/* _SPP_IPV6_COMMON_H */
+=======
  ** Structures/Data Types                                            **
  **********************************************************************/
 
@@ -186,3 +207,4 @@ static u_int32_t IPv6_Rule_Hash(void *);
 static int IPv6_Rule_KeyCompare(void *, void *);
 
 #endif	/* _SPP_IPV6_H */
+>>>>>>> d3c75260618737d57f8edd18687983944a621490

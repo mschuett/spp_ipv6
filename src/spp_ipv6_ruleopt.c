@@ -23,14 +23,13 @@
  *
  */
 
-#include <errno.h>
-#include "spp_ipv6.h"
-#include "spp_ipv6_constants.h"
-#include "spp_ipv6_data_structs.h"
+#include "spp_ipv6_common.h"
 // for rule option:
 #include "sf_snort_plugin_api.h"
 // for IPv6_Rule_Hash
 #include "sfhashfcn.h"
+
+extern uint_fast8_t ND_hdrlen[255];
 
 /* reads whitespace and optional comparison operator;
  * advances the char* and returns the operator to use
@@ -142,7 +141,7 @@ static bool IPv6_Check_Ext_Order(SFSnortPacket *p)
 }
 
 /* Parsing for rule options */
-static int IPv6_Rule_Init(char *name, char *params, void **data)
+int IPv6_Rule_Init(char *name, char *params, void **data)
 {
     struct IPv6_RuleOpt_Data *sdata;
     enum IPv6_RuleOpt_Type ruletype;
@@ -302,7 +301,7 @@ static int IPv6_Rule_Init(char *name, char *params, void **data)
     return 1;
 }
 
-static u_int32_t IPv6_Rule_Hash(void *d)
+u_int32_t IPv6_Rule_Hash(void *d)
 {
     u_int32_t a,b,c;
     struct IPv6_RuleOpt_Data *sdata = (struct IPv6_RuleOpt_Data *)d;
@@ -315,7 +314,7 @@ static u_int32_t IPv6_Rule_Hash(void *d)
     return c;
 }
 
-static int IPv6_Rule_KeyCompare(void *l, void *r)
+int IPv6_Rule_KeyCompare(void *l, void *r)
 {
     struct IPv6_RuleOpt_Data *left = (struct IPv6_RuleOpt_Data *)l;
     struct IPv6_RuleOpt_Data *right = (struct IPv6_RuleOpt_Data *)r;
@@ -351,7 +350,7 @@ static int IPv6_Rule_KeyCompare(void *l, void *r)
 
 
 /* Rule option evaluation */
-static int IPv6_Rule_Eval(void *raw_packet, const u_int8_t **cursor __attribute__((unused)), void *data)
+int IPv6_Rule_Eval(void *raw_packet, const u_int8_t **cursor __attribute__((unused)), void *data)
 {
     SFSnortPacket *p = (SFSnortPacket*) raw_packet;
     struct IPv6_RuleOpt_Data *sdata = (struct IPv6_RuleOpt_Data *) data;

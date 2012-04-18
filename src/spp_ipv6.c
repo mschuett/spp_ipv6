@@ -24,12 +24,7 @@
  */
 
 #include "sf_ip.h"
-
 #include "spp_ipv6.h"
-#include "spp_ipv6_constants.h"
-#include "spp_ipv6_data_structs.h"
-#include "spp_ipv6_data_structs.c"
-#include "spp_ipv6_ruleopt.c"
 
 /* snort boilerplate code to support contexts and profiling */
 tSfPolicyUserContextId ipv6_config = NULL;
@@ -43,7 +38,27 @@ extern DynamicPreprocessorData _dpd;
 PreprocStats ipv6PerfStats;
 #endif
 
-#include "spp_ipv6_parse.c"
+/* This array defines which ICMPv6 types may contain neighbor discovery options
+ * and contain their header lengths, i.e. the right offsets to find their options.
+ *
+ * (Most lengths are sizeof(struct nd_router_solicit) -- this is the basic ICMPv6
+ * type with 32 bits for type/code/checksum, 32 bits reserved or for identifiers,
+ * and possibly ND options starting in the 3nd 32-bit block.)
+ */
+uint_fast8_t ND_hdrlen[255] = {
+    [ICMP6_SOLICITATION]      = sizeof(struct nd_router_solicit),
+    [ICMP6_ADVERTISEMENT]     = sizeof(struct nd_router_advert),
+    [ICMP6_N_SOLICITATION]    = sizeof(struct nd_neighbor_solicit),
+    [ICMP6_N_ADVERTISEMENT]   = sizeof(struct nd_neighbor_advert),
+    [ICMP6_REDIRECT]          = sizeof(struct nd_redirect),
+    [ICMP6_INV_SOLICITATION]  = sizeof(struct nd_router_solicit),
+    [ICMP6_INV_ADVERTISEMENT] = sizeof(struct nd_router_solicit),
+    [ICMP6_MOBILEPREFIX_ADV]  = sizeof(struct nd_router_solicit),
+    [ICMP6_CRT_SOLICITATION]  = sizeof(struct nd_router_solicit),
+    [ICMP6_CRT_ADVERTISEMENT] = sizeof(struct certpath_adv {struct icmp6_hdr hdr;
+                                                u_int16_t compact; u_int16_t reserved;}),
+    [ICMP6_MOBILE_FH]         = sizeof(struct nd_router_solicit),
+};
 
 /**
  * Register init functions when library is loaded.
@@ -674,3 +689,100 @@ static void IPv6_Process_ICMPv6_NS(const SFSnortPacket *p, struct IPv6_State *co
                   sfip_to_str(&ip_entry->ip)););
     ALERT(SID_ICMP6_ND_NEW_DAD);
 }
+
+/**
+ * Parse the configuration options in snort.conf
+ *
+ * Currently supported options: router_mac, host_mac, net_prefix
+ */
+void set_default_config(struct IPv6_Config *config)
+{
+    config->track_ndp = true;
+    // for testing: 1h, later: 2-12h
+    config->keep_state_duration = 60*60;
+    config->expire_run_interval = 20*60;
+    // not sure if these are realistic, should be high enough
+    config->max_routers     = 32;
+    config->max_hosts       = 8192;
+    config->max_unconfirmed = 32768;
+
+    return;
+}
+
+#define BIN_OPTION(X, Y) if (!strcasecmp(X, arg)) {         \
+                             (Y) = false;                   \
+                             _dpd.logMsg("  " X "\n");      \
+                             arg = strtok(NULL, " \t\n\r"); \
+                         }
+
+void read_num(char **arg, const char *param, u_int32_t *configptr)
+{
+    uint_fast32_t minutes;
+    *arg = strtok(NULL, " \t\n\r");
+    minutes = (uint_fast32_t) strtoul(*arg, NULL, 10);
+    if (errno) {
+        _dpd.fatalMsg("  Invalid parameter to %s\n", param);
+    }
+    *configptr = 60 * minutes;
+    _dpd.logMsg("  %s = %u minutes = %u secs\n",
+                param, minutes, *configptr);
+    *arg = strtok(NULL, " \t\n\r");
+}
+
+static void IPv6_Parse(char *args, struct IPv6_Config *config)
+{
+    char *arg;
+    char ismac;
+    sfip_t *prefix;
+    SFIP_RET rc;
+
+    set_default_config(config);
+    _dpd.logMsg("IPv6 preprocessor config:\n");
+    if (!args) {
+        _dpd.logMsg("\tno additional parameters\n");
+        return;
+    }
+
+    arg = strtok(args, " \t\n\r");
+    while (arg) {
+        if(!strcasecmp("router_mac", arg)) { // and now a list of 0-n router MACs
+            config->report_new_routers = true;
+            while ((arg = strtok(NULL, ", \t\n\r")) && (ismac = IS_MAC(arg))) {
+                mac_add(config->router_whitelist, arg);
+                _dpd.logMsg("  default router MAC %s\n", arg);
+            }
+        } else if(!strcasecmp("host_mac", arg)) { // and now a list of 0-n host MACs
+            config->report_new_hosts = true;
+            while ((arg = strtok(NULL, ", \t\n\r")) && (ismac = IS_MAC(arg))) {
+                mac_add(config->host_whitelist, arg);
+                _dpd.logMsg("  default host MAC %s\n", arg);
+            }
+        } else if(!strcasecmp("net_prefix", arg)) { // and now a list of 0-n prefixes
+            config->report_prefix_change = true;
+            while ((arg = strtok(NULL, ", \t\n\r")) && strchr(arg, '/')) {  // TODO remove /-check
+                prefix = sfip_alloc(arg, &rc);
+                if (rc == SFIP_SUCCESS) {
+                    add_ip(config->prefix_whitelist, prefix);
+                    _dpd.logMsg("  default net prefix %s/%d\n",
+                        sfip_to_str(prefix), sfip_bits(prefix));
+                } else {
+                    _dpd.fatalMsg("  Invalid prefix %s\n", arg);
+                }
+            }
+        } else if(!strcasecmp("max_routers", arg)) {
+            read_num(&arg, "max_routers", &(config->max_routers));
+        } else if(!strcasecmp("max_hosts", arg)) {
+            read_num(&arg, "max_hosts", &(config->max_hosts));
+        } else if(!strcasecmp("max_unconfirmed", arg)) {
+            read_num(&arg, "max_unconfirmed", &(config->max_unconfirmed));
+        } else if(!strcasecmp("keep_state", arg)) {
+            read_num(&arg, "keep_state", &(config->keep_state_duration));
+        } else if(!strcasecmp("expire_run", arg)) {
+            read_num(&arg, "expire_run", &(config->expire_run_interval));
+        } else BIN_OPTION("disable_tracking", config->track_ndp)
+          else {
+            _dpd.fatalMsg("IPv6: Invalid option %s\n", arg);
+        }
+    }
+}
+

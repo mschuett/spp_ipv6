@@ -24,6 +24,8 @@ CPPFLAGS = \
 	 $(CONFIGFLAGS)
 OBJS =  \
 	$(TARGETDIR)/spp_ipv6.o \
+	$(TARGETDIR)/spp_ipv6_ruleopt.o \
+	$(TARGETDIR)/spp_ipv6_data_structs.o \
 	$(TARGETDIR)/sf_ip.o \
 	$(TARGETDIR)/sfPolicyUserData.o \
 	$(TARGETDIR)/sf_dynamic_preproc_lib.o
@@ -45,8 +47,10 @@ install: $(TARGETDIR)/lib_ipv6_preproc.so
 #### Clean target deletes all generated files ####
 clean:
 	rm -f \
-		$(TARGETDIR)/lib_ipv6_preproc.so \
 		$(TARGETDIR)/spp_ipv6.o \
+		$(TARGETDIR)/spp_ipv6_ruleopt.o \
+		$(TARGETDIR)/spp_ipv6_data_structs.o \
+		$(TARGETDIR)/lib_ipv6_preproc.so \
 		$(TARGETDIR)/sf_ip.o \
 		$(TARGETDIR)/sf_dynamic_preproc_lib.o \
 		$(TARGETDIR)/sfPolicyUserData.o
@@ -56,5 +60,3 @@ clean:
 # Create the target directory (if needed)
 $(TARGETDIR):
 	mkdir -p $(TARGETDIR)
-
-

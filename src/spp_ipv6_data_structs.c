@@ -8,7 +8,7 @@
  *
  */
 
-#include "spp_ipv6_data_structs.h"
+#include "spp_ipv6_common.h"
 
 /**********************************************************************
  ** STAILQ IP_List                                                   **
@@ -18,7 +18,7 @@
  * Add IP (sfip_t) to a list.
  * no input checking, arguments have to be valid.
  */
-static void add_ip(struct IP_List_head *listhead, sfip_t *ip)
+void add_ip(struct IP_List_head *listhead, sfip_t *ip)
 {
     struct IP_List *entry;
     if (!(entry = (struct IP_List *) calloc(1, sizeof(struct IP_List))))
@@ -31,7 +31,7 @@ static void add_ip(struct IP_List_head *listhead, sfip_t *ip)
 /**
  * Check if IP matches a prefix in list.
  */
-static bool ip_inprefixlist(struct IP_List_head *listhead, sfip_t *ip)
+bool ip_inprefixlist(struct IP_List_head *listhead, sfip_t *ip)
 {
     struct IP_List *entry;
 
@@ -46,7 +46,7 @@ static bool ip_inprefixlist(struct IP_List_head *listhead, sfip_t *ip)
 /**
  * Check if IP is in list.
  */
-static bool ip_inlist(struct IP_List_head *listhead, sfip_t *ip)
+bool ip_inlist(struct IP_List_head *listhead, sfip_t *ip)
 {
     struct IP_List *entry;
 
@@ -65,7 +65,7 @@ static bool ip_inlist(struct IP_List_head *listhead, sfip_t *ip)
 /**
  * Compare MAC addesses
  */
-static short mac_cmp(struct MAC_Entry *a, struct MAC_Entry *b)
+short mac_cmp(struct MAC_Entry *a, struct MAC_Entry *b)
 {
     return memcmp(&a->mac, &b->mac, sizeof(a->mac));
 }
@@ -75,7 +75,7 @@ static short mac_cmp(struct MAC_Entry *a, struct MAC_Entry *b)
  *
  * NB: no input checking; assume two valid IPv6 addresses
  */
-static short host_cmp(struct IPv6_Host *a, struct IPv6_Host *b)
+short host_cmp(struct IPv6_Host *a, struct IPv6_Host *b)
 {
     // optimized
     return memcmp(&a->ip.ip, &b->ip.ip, sizeof(b->ip.ip));
@@ -95,7 +95,7 @@ static short host_cmp(struct IPv6_Host *a, struct IPv6_Host *b)
  * Parse a string MAC into binary data
  * no input checking, arguments have to be valid
  */
-static void mac_parse(const char* string, u_int8_t dst[])
+void mac_parse(const char* string, u_int8_t dst[])
 {
     dst[0] = (u_int8_t) strtoul(&string[ 0], NULL, 16);
     dst[1] = (u_int8_t) strtoul(&string[ 3], NULL, 16);
@@ -108,7 +108,7 @@ static void mac_parse(const char* string, u_int8_t dst[])
 /**
  * Aux. function to format MAC address (in static buffer).
  */
-static char *pprint_mac(const u_int8_t ether_source[])
+char *pprint_mac(const u_int8_t ether_source[])
 {
     static char buf[18];
     snprintf(buf, sizeof(buf),
@@ -122,7 +122,7 @@ static char *pprint_mac(const u_int8_t ether_source[])
 /**
  * Aux. function to format timestamp (in static buffer).
  */
-static char *pprint_ts(const time_t ts)
+char *pprint_ts(const time_t ts)
 {
     struct tm *printtm;
     static char buf[64];
@@ -140,7 +140,7 @@ static char *pprint_ts(const time_t ts)
  *
  * TODO: merge with normal add method
  */
-static void mac_add(struct MAC_Entry_head *head, const char *mac)
+void mac_add(struct MAC_Entry_head *head, const char *mac)
 {
     struct MAC_Entry *entry;
 
@@ -151,13 +151,13 @@ static void mac_add(struct MAC_Entry_head *head, const char *mac)
     RB_INSERT(MAC_Entry_data, &head->data, entry);
 }
 
-RB_GENERATE_STATIC(MAC_Entry_data,  MAC_Entry, entries, mac_cmp);
-RB_GENERATE_STATIC(IPv6_Hosts_data, IPv6_Host, entries, host_cmp);
+RB_GENERATE(MAC_Entry_data,  MAC_Entry, entries, mac_cmp);
+RB_GENERATE(IPv6_Hosts_data, IPv6_Host, entries, host_cmp);
 
 /**
  * deletes an IPv6_Host entry
  */
-static void del_host_entry(struct IPv6_Hosts_head *head,
+void del_host_entry(struct IPv6_Hosts_head *head,
                            struct IPv6_Host *ip)
 {
     if (RB_REMOVE(IPv6_Hosts_data, &head->data, ip)) {
@@ -173,7 +173,7 @@ static void del_host_entry(struct IPv6_Hosts_head *head,
  * creates an IPv6_Host entry if it does not exist already (NULL on error)
  * Note: only for DADs, i.e. the MAC layer uses 'ff:ff:ff:ff:ff:ff'
  */
-static struct IPv6_Host *create_dad_entry_ifnew(struct IPv6_Hosts_head *head,
+struct IPv6_Host *create_dad_entry_ifnew(struct IPv6_Hosts_head *head,
                                                 const struct timeval *tv,
                                                 const u_int8_t ether_source[],
                                                 const sfip_t *ip_src)
@@ -184,7 +184,7 @@ static struct IPv6_Host *create_dad_entry_ifnew(struct IPv6_Hosts_head *head,
 /**
  * deletes an IPv6_Host entry from DAD
  */
-static void del_dad_entry(struct IPv6_Hosts_head *head,
+void del_dad_entry(struct IPv6_Hosts_head *head,
                           struct IPv6_Host *ip)
 {
     del_host_entry(head, ip);
@@ -193,7 +193,7 @@ static void del_dad_entry(struct IPv6_Hosts_head *head,
 /**
  * creates an IPv6_Host entry (or NULL on error)
  */
-static struct IPv6_Host *create_host_entry(struct IPv6_Hosts_head *head,
+struct IPv6_Host *create_host_entry(struct IPv6_Hosts_head *head,
                                            const struct timeval *tv,
                                            const u_int8_t ether_source[],
                                            const sfip_t *ip_src)
@@ -245,7 +245,7 @@ static struct IPv6_Host *create_host_entry(struct IPv6_Hosts_head *head,
  *
  * FIXME: unused?
  */
-static struct IPv6_Host *get_machost_entry(struct MAC_Entry_head *head,
+struct IPv6_Host *get_machost_entry(struct MAC_Entry_head *head,
                                            const u_int8_t ether_source[],
                                            const sfip_t *ip_src)
 {
@@ -258,7 +258,7 @@ static struct IPv6_Host *get_machost_entry(struct MAC_Entry_head *head,
 /**
  * retrieves an IPv6_Host entry (or NULL on error)
  */
-static struct IPv6_Host *get_host_entry(struct IPv6_Hosts_head *head,
+struct IPv6_Host *get_host_entry(struct IPv6_Hosts_head *head,
                                         const sfip_t *ip_src)
 {
     struct IPv6_Host ip_pivot;
@@ -272,7 +272,7 @@ static struct IPv6_Host *get_host_entry(struct IPv6_Hosts_head *head,
 /**
  * retrieves a MAC_List entry (or NULL on error)
  */
-static struct MAC_Entry *get_mac_entry(struct MAC_Entry_head *head,
+struct MAC_Entry *get_mac_entry(struct MAC_Entry_head *head,
                                        const u_int8_t ether_source[])
 {
     struct MAC_Entry mac_pivot = {
@@ -286,7 +286,7 @@ static struct MAC_Entry *get_mac_entry(struct MAC_Entry_head *head,
  * creates a MAC_List entry, including the IP-tree head
  * returns entry, or NULL on error
  */
-static struct MAC_Entry *create_mac_entry(struct MAC_Entry_head *head,
+struct MAC_Entry *create_mac_entry(struct MAC_Entry_head *head,
                                           const u_int8_t ether_source[])
 {
     struct MAC_Entry       *new_mac = NULL;
@@ -318,7 +318,7 @@ static struct MAC_Entry *create_mac_entry(struct MAC_Entry_head *head,
 /**
  * Add a router to a sorted list.
  */
-static LISTOP_RET state_router_add(struct IPv6_Hosts_head *head,
+LISTOP_RET state_router_add(struct IPv6_Hosts_head *head,
                                    struct IPv6_Host **elem,
                                    const struct timeval* tv,
                                    const u_int8_t ether_source[],
@@ -373,7 +373,7 @@ static LISTOP_RET state_router_add(struct IPv6_Hosts_head *head,
  * add host to state
  * ip_src is optional (if NULL, then package ip_src is used)
  */
-static void confirm_host(const SFSnortPacket *p,
+void confirm_host(const SFSnortPacket *p,
                          struct IPv6_State *context,
                          const sfip_t* ip_src)
 {
@@ -411,7 +411,7 @@ static void confirm_host(const SFSnortPacket *p,
  *
  * Returns address of added host entry in *elem.
  */
-static LISTOP_RET state_host_add(struct IPv6_Hosts_head *head,
+LISTOP_RET state_host_add(struct IPv6_Hosts_head *head,
                                  struct IPv6_Host **elem,
                                  const struct timeval* tv,
                                  const u_int8_t ether_source[],
@@ -439,7 +439,7 @@ static LISTOP_RET state_host_add(struct IPv6_Hosts_head *head,
 /**
  * Auxillary function to print uniform lists of hosts and routers.
  */
-static void state_host_printlist(struct IPv6_Hosts_head *head)
+void state_host_printlist(struct IPv6_Hosts_head *head)
 {
     struct IPv6_Host *host;
     char routerinfo[128];
@@ -477,7 +477,7 @@ static void state_host_printlist(struct IPv6_Hosts_head *head)
  *
  * returns number of entries after deletions
  */
-static u_int32_t state_host_expirelist(struct IPv6_Hosts_head *head, time_t now, time_t keep)
+u_int32_t state_host_expirelist(struct IPv6_Hosts_head *head, time_t now, time_t keep)
 {
     struct IPv6_Host *var, *nxt;
     u_int32_t entries = 0;
@@ -503,7 +503,7 @@ static u_int32_t state_host_expirelist(struct IPv6_Hosts_head *head, time_t now,
 /**
  * Aux. function to get memory consumtion
  */
-static size_t state_host_memusage(struct IPv6_Hosts_head *head)
+size_t state_host_memusage(struct IPv6_Hosts_head *head)
 {
     struct IPv6_Host *var;
     size_t size = 0;

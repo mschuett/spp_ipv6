@@ -100,28 +100,6 @@ struct ICMPv6_RA {
     u_int32_t nd_ra_retransmit;
 } __attribute__((packed));
 
-/* This array defines which ICMPv6 types may contain neighbor discovery options
- * and contain their header lengths, i.e. the right offsets to find their options.
- *
- * (Most lengths are sizeof(struct nd_router_solicit) -- this is the basic ICMPv6
- * type with 32 bits for type/code/checksum, 32 bits reserved or for identifiers,
- * and possibly ND options starting in the 3nd 32-bit block.)
- */
-uint_fast8_t ND_hdrlen[255] = {
-    [ICMP6_SOLICITATION]      = sizeof(struct nd_router_solicit),
-    [ICMP6_ADVERTISEMENT]     = sizeof(struct nd_router_advert),
-    [ICMP6_N_SOLICITATION]    = sizeof(struct nd_neighbor_solicit),
-    [ICMP6_N_ADVERTISEMENT]   = sizeof(struct nd_neighbor_advert),
-    [ICMP6_REDIRECT]          = sizeof(struct nd_redirect),
-    [ICMP6_INV_SOLICITATION]  = sizeof(struct nd_router_solicit),
-    [ICMP6_INV_ADVERTISEMENT] = sizeof(struct nd_router_solicit),
-    [ICMP6_MOBILEPREFIX_ADV]  = sizeof(struct nd_router_solicit),
-    [ICMP6_CRT_SOLICITATION]  = sizeof(struct nd_router_solicit),
-    [ICMP6_CRT_ADVERTISEMENT] = sizeof(struct certpath_adv {struct icmp6_hdr hdr;
-                                                u_int16_t compact; u_int16_t reserved;}),
-    [ICMP6_MOBILE_FH]         = sizeof(struct nd_router_solicit),
-};
-
 /**********************************************************************
  ** Snort-Plugin Constants                                           **
  **********************************************************************/
