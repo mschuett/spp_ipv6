@@ -44,6 +44,9 @@ $(TARGETDIR)/%.o: src/%.c
 install: $(TARGETDIR)/lib_ipv6_preproc.so
 	install $(TARGETDIR)/lib_ipv6_preproc.so $(INSTALLDIR)/$(INSTALLFILENAME)
 
+uninstall:
+	rm -f $(INSTALLDIR)/$(INSTALLFILENAME)
+
 #### Clean target deletes all generated files ####
 clean:
 	rm -f \
