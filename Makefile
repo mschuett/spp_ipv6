@@ -1,7 +1,7 @@
 
 #### Compiler and tool definitions shared by all build targets #####
 BASICOPTS = -fPIC -O1
-CONFIGFLAGS = -DSF_WCHAR -DSUP_IP6 -DTARGET_BASED -DPERF_PROFILING -DSNORT_RELOAD -DNORMALIZER -DACTIVE_RESPONSE
+CONFIGFLAGS = -DSF_WCHAR -DSUP_IP6 -DTARGET_BASED -DPERF_PROFILING -DSNORT_RELOAD -DNORMALIZER -DACTIVE_RESPONSE -DMODULUS_HASH
 
 # Define the target directories.
 TARGETDIR = build
@@ -28,6 +28,9 @@ OBJS =  \
 	$(TARGETDIR)/spp_ipv6_data_structs.o \
 	$(TARGETDIR)/sf_ip.o \
 	$(TARGETDIR)/sfPolicyUserData.o \
+	$(TARGETDIR)/sfghash.o \
+	$(TARGETDIR)/sfhashfcn.o \
+	$(TARGETDIR)/sfprimetable.o \
 	$(TARGETDIR)/sf_dynamic_preproc_lib.o
 	
 
@@ -55,6 +58,9 @@ clean:
 		$(TARGETDIR)/spp_ipv6_data_structs.o \
 		$(TARGETDIR)/lib_ipv6_preproc.so \
 		$(TARGETDIR)/sf_ip.o \
+		$(TARGETDIR)/sfghash.o \
+		$(TARGETDIR)/sfhashfcn.o \
+		$(TARGETDIR)/sfprimetable.o \
 		$(TARGETDIR)/sf_dynamic_preproc_lib.o \
 		$(TARGETDIR)/sfPolicyUserData.o
 	rm -f -r $(TARGETDIR)

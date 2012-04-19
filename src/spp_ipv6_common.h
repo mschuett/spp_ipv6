@@ -26,7 +26,8 @@
 /**********************************************************************
  ** Includes                                                         **
  **********************************************************************/
-#include "../include/sf_types.h"
+#include "sf_types.h"
+#include "sfghash.h"
 #include <time.h>
 #include <sys/time.h>
 #include <stdlib.h>
@@ -68,6 +69,8 @@
   && isxdigit((string)[12]) && isxdigit((string)[13]) && (string)[14] == ':' \
   && isxdigit((string)[15]) && isxdigit((string)[16]) && (string)[17] == '\0')
 
+/* get size of struct member */
+#define member_size(type, member) sizeof(((type *)0)->member)
 
 /**********************************************************************
  ** Function Prototypes                                              **

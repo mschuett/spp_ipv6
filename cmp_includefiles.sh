@@ -30,6 +30,7 @@ sf_sdlist_types.h \
 sf_snort_packet.h \
 sf_snort_plugin_api.h \
 sfcontrol.h \
+sfghash.h \
 sfhashfcn.h \
 sfrt.h \
 sfrt_dir.h \
@@ -51,3 +52,11 @@ for f in sf_types.h snort_debug.h; do
   cmp include/$f ${snort_src_dir}/src/$f
 done
 
+cmp include/sfprimetable.h ${snort_src_dir}/src/sfutil/sfprimetable.h
+# files in src
+cmp src/sfprimetable.c ${snort_src_dir}/src/sfutil/sfprimetable.c
+cmp src/sfghash.c ${snort_src_dir}/src/sfutil/sfghash.c
+cmp src/sfhashfcn.c ${snort_src_dir}/src/sfutil/sfhashfcn.c
+cmp src/sf_ip.c ${snort_src_dir}/src/sfutil/sf_ip.c
+cmp src/sf_dynamic_preproc_lib.c ${snort_src_dir}/src/dynamic-preprocessors/include/sf_dynamic_preproc_lib.c
+cmp src/sfPolicyUserData.c ${snort_src_dir}/src/dynamic-preprocessors/include/sfPolicyUserData.c
