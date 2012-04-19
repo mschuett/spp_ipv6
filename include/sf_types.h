@@ -20,7 +20,7 @@
 #ifndef __SF_TYPES_H__
 #define __SF_TYPES_H__
 
-#include "sf_types.h"
+#include <sys/types.h>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"

@@ -84,8 +84,8 @@ void DebugWideMessageFunc(uint64_t dbg,wchar_t *fmt, ...);
     extern char *DebugMessageFile;
     extern int DebugMessageLine;
 
-    #define    DebugMessage    *_dpd.debugMsgFile = __FILE__; *_dpd.debugMsgLine = __LINE__; _dpd.debugMsg
-    #define    DebugWideMessage    *_dpd.debugMsgFile = __FILE__; *_dpd.debugMsgLine = __LINE__; _dpd.debugWideMsg
+    #define    DebugMessage    DebugMessageFile = __FILE__; DebugMessageLine = __LINE__; DebugMessageFunc
+    #define    DebugWideMessage    DebugMessageFile = __FILE__; DebugMessageLine = __LINE__; DebugWideMessageFunc
 
     uint64_t GetDebugLevel (void);
     int DebugThis(uint64_t level);
