@@ -9,7 +9,7 @@
 #include "spp_ipv6_data_ip.h"
 
 
-char *ipdata[] = {
+static char *ipdata[] = {
     "ffe5:1838:afd7:2472:b3e7:3ae6:a228:12b4",
     "0E51:A030:C113:3838:C080:DD09:4D6C:189D",
     "9af2:2354:ecd1:f412:b9e3:648C:519D:DDDF",
@@ -51,33 +51,29 @@ char *ipdata[] = {
  * CUnit Test Suite
  */
 
-IP_t a, b, c, d, e, f;
-const IP_t i = {
+static IP_t a, b, c, d, e, f;
+static const IP_t i = {
         .family = AF_INET6,
         .bits = 128,
         .ip.u6_addr8 = {0x20, 0x3, 0xd7, 0x30, 0xc2, 0x6d, 0x17, 0xb4,
                 0x86, 0x92, 0xff, 0x9a, 0xda, 0x88, 0xc9, 0x9a}
     };
-const sfip_t sfip_i = {
+static const sfip_t sfip_i = {
         .family = AF_INET6,
         .bits = 128,
         .ip.u6_addr8 = {0x20, 0x3, 0xd7, 0x30, 0xc2, 0x6d, 0x17, 0xb4,
                 0x86, 0x92, 0xff, 0x9a, 0xda, 0x88, 0xc9, 0x9a}
     };
-const char *str_i = "2003:d730:c26d:17b4:8692:ff9a:da88:c99a";
+static const char *str_i = "2003:d730:c26d:17b4:8692:ff9a:da88:c99a";
 
     
-int init_suite(void) {
+int testIp_init_suite(void) {
     ip_parse(&a, "2003:d730:c26d:17b4:8692:ff9a:da88:c99a");
     ip_parse(&b, "2003:d730:c26d:17b4:8692:ff9a:da88:c99a");
     ip_parse(&c, "2003:d730:c26d:17b4:8692:ff9a:da88:c990");
     ip_parse(&d, "2003:d730:c26d:17b4:8692:ff9a:da88:c991");
     ip_parse(&e, "2003:d730:c26d:17b4:8692:ff9a:da88:c992");
     ip_parse(&f, "2003:d730:c26d:17b4:8692:ff9a:da88:c993");
-    return 0;
-}
-
-int clean_suite(void) {
     return 0;
 }
 
@@ -176,69 +172,49 @@ void testIpset_create() {
     IP_set *s;
     DATAOP_RET rc;
     
-    s = ipset_create(0,0,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = ipset_create(0);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, ipset_count(s));
     rc = ipset_add(s, &i);
     CU_ASSERT_EQUAL(1, ipset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     ipset_delete(s);
     
-    s = ipset_create(0,0,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = ipset_create(1);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, ipset_count(s));
     rc = ipset_add(s, &i);
     CU_ASSERT_EQUAL(1, ipset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     ipset_delete(s);
 
-    s = ipset_create(5000,0,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = ipset_create(5);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, ipset_count(s));
     rc = ipset_add(s, &i);
     CU_ASSERT_EQUAL(1, ipset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     ipset_delete(s);
 
-    s = ipset_create(0,5000,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = ipset_create(5000);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, ipset_count(s));
     rc = ipset_add(s, &i);
     CU_ASSERT_EQUAL(1, ipset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     ipset_delete(s);
 
-    s = ipset_create(0,0,5000);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = ipset_create(50000);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, ipset_count(s));
     rc = ipset_add(s, &i);
     CU_ASSERT_EQUAL(1, ipset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     ipset_delete(s);
-
-    s = ipset_create(5000,5000,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
-    CU_ASSERT_EQUAL(0, ipset_count(s));
-    rc = ipset_add(s, &i);
-    CU_ASSERT_EQUAL(1, ipset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_ADDED);
-    ipset_delete(s);
-
-    s = ipset_create(0,5000,5000);
-    CU_ASSERT_PTR_NOT_NULL(s);
-    CU_ASSERT_EQUAL(0, ipset_count(s));
-    rc = ipset_add(s, &i);
-    CU_ASSERT_EQUAL(1, ipset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_ADDED);
-    ipset_delete(s);
-
-    // some memsizes are too small, this is just to see the limit, a failure is not fatal
-    CU_ASSERT_PTR_NULL(ipset_create(1000,0,4099));
-    CU_ASSERT_PTR_NOT_NULL(ipset_create(1000,0,4100));
 }
 
 void testIpset_count() {
-    IP_set *s = ipset_create(0,0,0);
+    IP_set *s = ipset_create(0);
     
     CU_ASSERT_EQUAL(0, ipset_count(s));
     CU_ASSERT_TRUE(ipset_empty(s));
@@ -256,9 +232,9 @@ void testIpset_add() {
     IP_set *s;
     DATAOP_RET rc;
     
-    // limit by entry count
-    s = ipset_create(4,4,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    // no limit by entry count
+    s = ipset_create(2);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, ipset_count(s));
     rc = ipset_add(s, &a);
     CU_ASSERT_EQUAL(1, ipset_count(s));
@@ -278,29 +254,8 @@ void testIpset_add() {
     CU_ASSERT_EQUAL(4, ipset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     rc = ipset_add(s, &f);
-    CU_ASSERT_EQUAL(4, ipset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_NOMEM);
-    ipset_delete(s);
-    
-    // limit by memory usage
-    // not a good test, because it depends on the implementation and possibly even memory layout
-    s = ipset_create(0,0,256);
-    CU_ASSERT_PTR_NOT_NULL(s);
-    rc = ipset_add(s, &a);
-    CU_ASSERT_EQUAL(1, ipset_count(s));
+    CU_ASSERT_EQUAL(5, ipset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
-    rc = ipset_add(s, &b);
-    CU_ASSERT_EQUAL(1, ipset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_EXISTS);
-    rc = ipset_add(s, &c);
-    CU_ASSERT_EQUAL(2, ipset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_ADDED);
-    rc = ipset_add(s, &d);
-    CU_ASSERT_EQUAL(2, ipset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_NOMEM);
-    rc = ipset_add(s, &e);
-    CU_ASSERT_EQUAL(2, ipset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_NOMEM);
     ipset_delete(s);
 }
 
@@ -309,9 +264,8 @@ void testIpset_addstring() {
     IP_set *s;
     DATAOP_RET rc;
     
-    // limit by entry count
-    s = ipset_create(25,0,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = ipset_create(25);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
 
     rc = ipset_addstring(s, str_i);
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
@@ -328,9 +282,8 @@ void testIpset_remove() {
     IP_set *s;
     DATAOP_RET rc;
     
-    // limit by entry count
-    s = ipset_create(5,0,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = ipset_create(5);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, ipset_count(s));
     rc = ipset_add(s, &a);
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
@@ -355,9 +308,8 @@ void testIpset_contains() {
     IP_set *s;
     DATAOP_RET rc;
     
-    // limit by entry count
-    s = ipset_create(5,0,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = ipset_create(5);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, ipset_count(s));
     rc = ipset_add(s, &a);
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
@@ -370,42 +322,5 @@ void testIpset_contains() {
     CU_ASSERT_FALSE(ipset_contains(s, &d));
 
     ipset_delete(s);
-}
-
-
-int main() {
-    CU_pSuite pSuite = NULL;
-            
-    /* Initialize the CUnit test registry */
-    if (CUE_SUCCESS != CU_initialize_registry())
-        return CU_get_error();
-
-    /* Add a suite to the registry */
-    pSuite = CU_add_suite("unittest_data_ip", init_suite, clean_suite);
-    if (NULL == pSuite) {
-        CU_cleanup_registry();
-        return CU_get_error();
-    }
-
-    /* Add the tests to the suite */
-    if ((NULL == CU_add_test(pSuite, "testIp_cmp",    testIp_cmp))    ||
-        (NULL == CU_add_test(pSuite, "testIp_eq",     testIp_eq))     ||
-        (NULL == CU_add_test(pSuite, "testIp_cpy",    testIp_cpy))    ||
-        (NULL == CU_add_test(pSuite, "testIp_parse",  testIp_parse))  ||
-        (NULL == CU_add_test(pSuite, "testIp_str",    testIp_str))    ||
-        (NULL == CU_add_test(pSuite, "testIp_set",    testIp_set))    ||
-        (NULL == CU_add_test(pSuite, "testIpset_create",    testIpset_create))    ||
-        (NULL == CU_add_test(pSuite, "testIpset_count",     testIpset_count))     ||
-        (NULL == CU_add_test(pSuite, "testIpset_add",       testIpset_add))       ||
-        (NULL == CU_add_test(pSuite, "testIpset_addstring", testIpset_addstring))) {
-        CU_cleanup_registry();
-        return CU_get_error();
-    }
-    
-    /* Run all tests using the CUnit Basic interface */
-    CU_basic_set_mode(CU_BRM_VERBOSE);
-    CU_basic_run_tests();
-    CU_cleanup_registry();
-    return CU_get_error();
 }
 
