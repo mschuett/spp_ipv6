@@ -127,31 +127,25 @@ char *ip_str(const IP_t *m)
 void ipset_print_all(IP_set *s)
 {
     IP_t *m;
-    SFXHASH_NODE *n;
+    SFGHASH_NODE *n;
 
-    n = sfxhash_findfirst(s);
+    n = sfghash_findfirst(s);
     while (n) {
         m = n->key;
         printf("'%s'\n", ip_str(m));
-        n = sfxhash_findnext(s);
+        n = sfghash_findnext(s);
     }
 }
 
 
-IP_set *ipset_create(int count, int maxcount, int memsize)
+IP_set *ipset_create(int count)
 {
     IP_set *s;
     if (!count) // set default
         count = 20;
-    s = sfxhash_new(count,
+    s = sfghash_new(count,
             sizeof(IP_t),
-            0,
-            memsize,
-            0, NULL, NULL, IPSET_RECYCLE);
-    if (s) {
-        sfxhash_splaymode(s, IPSET_SPLAY);
-        sfxhash_set_max_nodes(s, maxcount);
-    }
+            0, NULL);
     return s;
 }
 
@@ -160,7 +154,7 @@ IP_set *ipset_create(int count, int maxcount, int memsize)
  */
 void ipset_delete(IP_set *s)
 {
-    sfxhash_delete(s);
+    sfghash_delete(s);
 }
 
 /**
@@ -168,7 +162,7 @@ void ipset_delete(IP_set *s)
  */
 DATAOP_RET ipset_add(IP_set *s, const IP_t *m)
 {
-    return sfxhash_add(s, (IP_t *) m, HASHMARK);
+    return sfghash_add(s, (IP_t *) m, HASHMARK);
 }
 
 /**
@@ -178,7 +172,7 @@ DATAOP_RET ipset_addstring(IP_set *s, const char *ipstr)
 {
     IP_t *m;
     m = ip_parse(NULL, ipstr);
-    return sfxhash_add(s, m, HASHMARK);
+    return sfghash_add(s, m, HASHMARK);
 }
 
 /**
@@ -187,7 +181,7 @@ DATAOP_RET ipset_addstring(IP_set *s, const char *ipstr)
 bool ipset_contains(IP_set *s, const IP_t *m)
 {
     IP_t *k;
-    k = sfxhash_find(s, (IP_t *) m);
+    k = sfghash_find(s, (IP_t *) m);
     if (!k)
         return false;
     else {
@@ -202,7 +196,7 @@ bool ipset_contains(IP_set *s, const IP_t *m)
  */
 int ipset_remove(IP_set *s, const IP_t *m)
 {
-    return sfxhash_remove(s, (IP_t *) m);
+    return sfghash_remove(s, (IP_t *) m);
 }
 
 bool ipset_empty(IP_set *s)
@@ -212,5 +206,5 @@ bool ipset_empty(IP_set *s)
 
 int ipset_count(IP_set *s)
 {
-    return sfxhash_count(s);
+    return sfghash_count(s);
 }

@@ -55,28 +55,25 @@ char *no_macdata[] = {
 };
 
 /*
- * CUnit Test Suite
- */
-
-int init_suite(void) {
-    return 0;
-}
-
-int clean_suite(void) {
-    return 0;
-}
-
-/*
  * Some tests for basic definitions and the time stamp aux fct.
  */
 
 void test_data_common() {
+    CU_ASSERT_EQUAL(DATA_ADDED, DATA_OK);
+
     CU_ASSERT_EQUAL(DATA_ADDED, SFXHASH_OK);
     CU_ASSERT_EQUAL(DATA_OK,    SFXHASH_OK);
-    CU_ASSERT_EQUAL(DATA_ADDED, DATA_OK);
+    CU_ASSERT_EQUAL(DATA_ADDED, SFGHASH_OK);
+    CU_ASSERT_EQUAL(DATA_OK,    SFGHASH_OK);
+
+    CU_ASSERT_EQUAL(DATA_NOMEM, SFXHASH_NOMEM);
+    CU_ASSERT_EQUAL(DATA_NOMEM, SFGHASH_NOMEM);
+    CU_ASSERT_EQUAL(DATA_EXISTS, SFXHASH_INTABLE);
+    CU_ASSERT_EQUAL(DATA_EXISTS, SFGHASH_INTABLE);
     
     CU_ASSERT_EQUAL(DATA_ADDED, 0);
     CU_ASSERT_TRUE(SFXHASH_ERR < 0);
+    CU_ASSERT_TRUE(DATA_ERROR < 0);
 }
 
 void test_ts_str() {
@@ -190,70 +187,50 @@ void testMacset_create() {
     MAC_set *s;
     DATAOP_RET rc;
     
-    s = macset_create(0,0,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
-    CU_ASSERT_EQUAL(0, macset_count(s));
-    rc = macset_add(s, &a);
-    CU_ASSERT_EQUAL(1, macset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_ADDED);
-    macset_delete(s);
-    
-    s = macset_create(0,0,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = macset_create(0);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, macset_count(s));
     rc = macset_add(s, &a);
     CU_ASSERT_EQUAL(1, macset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     macset_delete(s);
 
-    s = macset_create(5000,0,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = macset_create(1);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, macset_count(s));
     rc = macset_add(s, &a);
     CU_ASSERT_EQUAL(1, macset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     macset_delete(s);
 
-    s = macset_create(0,5000,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = macset_create(5);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, macset_count(s));
     rc = macset_add(s, &a);
     CU_ASSERT_EQUAL(1, macset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     macset_delete(s);
 
-    s = macset_create(0,0,5000);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = macset_create(5000);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, macset_count(s));
     rc = macset_add(s, &a);
     CU_ASSERT_EQUAL(1, macset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     macset_delete(s);
 
-    s = macset_create(5000,5000,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = macset_create(5000000);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, macset_count(s));
     rc = macset_add(s, &a);
     CU_ASSERT_EQUAL(1, macset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     macset_delete(s);
-
-    s = macset_create(0,5000,5000);
-    CU_ASSERT_PTR_NOT_NULL(s);
-    CU_ASSERT_EQUAL(0, macset_count(s));
-    rc = macset_add(s, &a);
-    CU_ASSERT_EQUAL(1, macset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_ADDED);
-    macset_delete(s);
-
-    // some memsizes are too small, this is just to see the limit, a failure is not fatal
-    CU_ASSERT_PTR_NULL(macset_create(1000,0,4099));
-    CU_ASSERT_PTR_NOT_NULL(macset_create(1000,0,4100));
 }
 
 void testMacset_count() {
     MAC_t    a = {{ 0x12, 0x34, 0x56, 0x78, 0x90, 0xab}};
-    MAC_set *s = macset_create(0,0,0);
+    MAC_set *s = macset_create(5);
     
     CU_ASSERT_EQUAL(0, macset_count(s));
     CU_ASSERT_TRUE(macset_empty(s));
@@ -276,9 +253,9 @@ void testMacset_add() {
     MAC_set *s;
     DATAOP_RET rc;
     
-    // limit by entry count
-    s = macset_create(4,4,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    // no limit by entry count
+    s = macset_create(2);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, macset_count(s));
     rc = macset_add(s, &a);
     CU_ASSERT_EQUAL(1, macset_count(s));
@@ -298,33 +275,8 @@ void testMacset_add() {
     CU_ASSERT_EQUAL(4, macset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     rc = macset_add(s, &e);
-    CU_ASSERT_EQUAL(4, macset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_NOMEM);
-    macset_delete(s);
-    
-    // limit by memory usage
-    // not a good test, because it depends on the implementation and possibly even memory layout
-    s = macset_create(0,0,256);
-    CU_ASSERT_PTR_NOT_NULL(s);
-    rc = macset_add(s, &a);
-    CU_ASSERT_EQUAL(1, macset_count(s));
+    CU_ASSERT_EQUAL(5, macset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
-    rc = macset_add(s, &a);
-    CU_ASSERT_EQUAL(1, macset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_EXISTS);
-    rc = macset_add(s, &b);
-    CU_ASSERT_EQUAL(2, macset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_ADDED);
-    rc = macset_add(s, &c);
-    CU_ASSERT_EQUAL(3, macset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_ADDED);
-
-    rc = macset_add(s, &d);
-    CU_ASSERT_EQUAL(3, macset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_NOMEM);
-    rc = macset_add(s, &e);
-    CU_ASSERT_EQUAL(3, macset_count(s));
-    CU_ASSERT_EQUAL(rc, DATA_NOMEM);
     macset_delete(s);
 }
 
@@ -334,9 +286,8 @@ void testMacset_addstring() {
     MAC_set *s;
     DATAOP_RET rc;
     
-    // limit by entry count
-    s = macset_create(25,0,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = macset_create(25);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
 
     rc = macset_addstring(s, str_a);
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
@@ -356,9 +307,8 @@ void testMacset_remove() {
     MAC_set *s;
     DATAOP_RET rc;
     
-    // limit by entry count
-    s = macset_create(5,0,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = macset_create(5);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, macset_count(s));
     rc = macset_add(s, &a);
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
@@ -386,9 +336,8 @@ void testMacset_contains() {
     MAC_set *s;
     DATAOP_RET rc;
     
-    // limit by entry count
-    s = macset_create(5,0,0);
-    CU_ASSERT_PTR_NOT_NULL(s);
+    s = macset_create(5);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, macset_count(s));
     rc = macset_add(s, &a);
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
@@ -400,56 +349,5 @@ void testMacset_contains() {
     CU_ASSERT_FALSE(macset_contains(s, &c));
 
     macset_delete(s);
-}
-
-
-int main() {
-    CU_pSuite pSuite = NULL;
-
-    /* Initialize the CUnit test registry */
-    if (CUE_SUCCESS != CU_initialize_registry())
-        return CU_get_error();
-
-    /* Add a suite to the registry */
-    pSuite = CU_add_suite("unittest_data_misc", init_suite, clean_suite);
-    if (NULL == pSuite) {
-        CU_cleanup_registry();
-        return CU_get_error();
-    }
-    /* Add the tests to the suite */
-    if ((NULL == CU_add_test(pSuite, "test_data_common", test_data_common)) ||
-            (NULL == CU_add_test(pSuite, "test_ts_str", test_ts_str))) {
-        CU_cleanup_registry();
-        return CU_get_error();
-    }
-
-    /* Add a suite to the registry */
-    pSuite = CU_add_suite("unittest_data_mac", init_suite, clean_suite);
-    if (NULL == pSuite) {
-        CU_cleanup_registry();
-        return CU_get_error();
-    }
-
-    /* Add the tests to the suite */
-    if ((NULL == CU_add_test(pSuite, "testMac_cmp",    testMac_cmp))    ||
-        (NULL == CU_add_test(pSuite, "testMac_eq",     testMac_eq))     ||
-        (NULL == CU_add_test(pSuite, "testMac_cpy",    testMac_cpy))    ||
-        (NULL == CU_add_test(pSuite, "testMac_IS_MAC", testMac_IS_MAC)) ||
-        (NULL == CU_add_test(pSuite, "testMac_parse",  testMac_parse))  ||
-        (NULL == CU_add_test(pSuite, "testMac_str",    testMac_str))    ||
-        (NULL == CU_add_test(pSuite, "testMac_set",    testMac_set))    ||
-        (NULL == CU_add_test(pSuite, "testMacset_create",    testMacset_create))    ||
-        (NULL == CU_add_test(pSuite, "testMacset_count",     testMacset_count))     ||
-        (NULL == CU_add_test(pSuite, "testMacset_add",       testMacset_add))       ||
-        (NULL == CU_add_test(pSuite, "testMacset_addstring", testMacset_addstring))) {
-        CU_cleanup_registry();
-        return CU_get_error();
-    }
-    
-    /* Run all tests using the CUnit Basic interface */
-    CU_basic_set_mode(CU_BRM_VERBOSE);
-    CU_basic_run_tests();
-    CU_cleanup_registry();
-    return CU_get_error();
 }
 

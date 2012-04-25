@@ -18,16 +18,13 @@
 #include <sys/time.h>
 #include "sf_types.h"
 #include "sf_ip.h"
-#include "sfxhash.h"
+#include "sfghash.h"
 #include "snort_debug.h"
 #include "spp_ipv6_data_common.h"
 
 /* _very_ thin abstraction layers */
 typedef sfip_t  IP_t;
-typedef SFXHASH IP_set;
-/* it would be nice to benchmark these options some time */
-#define IPSET_SPLAY   0
-#define IPSET_RECYCLE 1
+typedef SFGHASH IP_set;
 
 // length of string representation of IP and prefix
 #define IP_STR_BUFLEN (INET6_ADDRSTRLEN+5)
@@ -43,7 +40,7 @@ IP_t      *ip_parse(IP_t *dst, const char* string);
 IP_t      *ip_set(IP_t *dst, const sfip_t *src);
 char      *ip_str(const IP_t *m);
 void       ipset_print_all(IP_set *s);
-IP_set    *ipset_create(int count, int maxcount, int memsize);
+IP_set    *ipset_create(int count);
 void       ipset_delete(IP_set *s);
 DATAOP_RET ipset_add(IP_set *s, const IP_t *m);
 DATAOP_RET ipset_addstring(IP_set *s, const char *ipstr);

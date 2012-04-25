@@ -4,7 +4,7 @@
  * Copyright (C) 2012 Martin Schuette <info@mschuette.name>
  *
  * Data structures and functions to store a plain list of MAC addresses.
- * Currently a wrapper arround Snort's sfxhash.
+ * Currently a wrapper arround Snort's sfghash.
  *
  * A later optimization may replace some functions by macros, but during
  * development I keep them for better debugging, testing, and type checking.
@@ -95,20 +95,12 @@ char *mac_str(const MAC_t *m)
     return buf;
 }
 
-MAC_set *macset_create(int count, int maxcount, int memsize)
+MAC_set *macset_create(int count)
 {
     MAC_set *s;
     if (!count) // set default
         count = 20;
-    s = sfxhash_new(count,
-            sizeof(MAC_t),
-            0,
-            memsize,
-            0, NULL, NULL, MACSET_RECYCLE);
-    if (s) {
-        sfxhash_splaymode(s, MACSET_SPLAY);
-        sfxhash_set_max_nodes(s, maxcount);
-    }
+    s = sfghash_new(count, sizeof(MAC_t), 0, NULL);
     return s;
 }
 
@@ -117,7 +109,7 @@ MAC_set *macset_create(int count, int maxcount, int memsize)
  */
 void macset_delete(MAC_set *s)
 {
-    sfxhash_delete(s);
+    sfghash_delete(s);
 }
 
 /**
@@ -125,7 +117,7 @@ void macset_delete(MAC_set *s)
  */
 DATAOP_RET macset_add(MAC_set *s, const MAC_t *m)
 {
-    return sfxhash_add(s, (MAC_t *) m, HASHMARK);
+    return sfghash_add(s, (MAC_t *) m, HASHMARK);
 }
 
 /**
@@ -135,7 +127,7 @@ DATAOP_RET macset_addstring(MAC_set *s, const char *mac)
 {
     MAC_t *m;
     m = mac_parse(NULL, mac);
-    return sfxhash_add(s, m, HASHMARK);
+    return sfghash_add(s, m, HASHMARK);
 }
 
 /**
@@ -144,7 +136,7 @@ DATAOP_RET macset_addstring(MAC_set *s, const char *mac)
 bool macset_contains(MAC_set *s, const MAC_t *m)
 {
     MAC_t *k;
-    k = sfxhash_find(s, (MAC_t *)m);
+    k = sfghash_find(s, (MAC_t *)m);
     if (!k)
         return false;
     else {
@@ -161,7 +153,7 @@ bool macset_empty(MAC_set *s)
 
 int macset_count(MAC_set *s)
 {
-    return sfxhash_count(s);
+    return sfghash_count(s);
 }
 
 /**
@@ -169,5 +161,5 @@ int macset_count(MAC_set *s)
  */
 DATAOP_RET macset_remove(MAC_set *s, const MAC_t *m)
 {
-    return sfxhash_remove(s, (MAC_t *) m);
+    return sfghash_remove(s, (MAC_t *) m);
 }

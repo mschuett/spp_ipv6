@@ -11,6 +11,7 @@
 #define	SPP_IPV6_DATA_COMMON_H
 
 #include "sfxhash.h"
+#include "sfghash.h"
 
 /* return values for data operations -- set to match sfxhash codes */
 typedef enum _data_op_return_values {

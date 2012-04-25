@@ -14,7 +14,7 @@
 #include <time.h>
 #include <sys/time.h>
 #include "sf_types.h"
-#include "sfxhash.h"
+#include "sfghash.h"
 #include "snort_debug.h"
 #include "spp_ipv6_data_common.h"
 
@@ -32,10 +32,8 @@ typedef struct _MAC_t {
 } MAC_t;
 
 /* _very_ thin abstraction layer */
-typedef SFXHASH MAC_set;
-/* it would be nice to benchmark these options some time */
-#define MACSET_SPLAY   0
-#define MACSET_RECYCLE 1
+typedef SFGHASH MAC_set;
+
 // length of string representation
 #define MAC_STR_BUFLEN 18
 
@@ -51,7 +49,7 @@ void       mac_cpy(MAC_t *dst, const MAC_t *src);
 MAC_t     *mac_parse(MAC_t *m, const char* string);
 char      *mac_str(const MAC_t *m);
 MAC_t     *mac_set(MAC_t *m, const u_int8_t ether_source[]);
-MAC_set   *macset_create(int count, int maxcount, int memsize);
+MAC_set   *macset_create(int count);
 void       macset_delete(MAC_set *s);
 DATAOP_RET macset_add(MAC_set *s, const MAC_t *m);
 DATAOP_RET macset_addstring(MAC_set *s, const char *mac);
