@@ -10,13 +10,16 @@
 #ifndef SPP_IPV6_DATA_COMMON_H
 #define	SPP_IPV6_DATA_COMMON_H
 
+#include "sfxhash.h"
+
 /* return values for data operations -- set to match sfxhash codes */
 typedef enum _data_op_return_values {
     DATA_NOMEM   = SFXHASH_NOMEM,     // memory error, e.g. malloc() failed
     DATA_ERROR   = SFXHASH_ERR,       // other error
     DATA_ADDED   = SFXHASH_OK,        // entry added
+    DATA_OK      = SFXHASH_OK,        // entry added
     DATA_EXISTS  = SFXHASH_INTABLE,   // entry already exists, no change
-    DATA_UPDATED,                     // entry updatet (e.g. new timestamp)
+//    DATA_UPDATED,                     // entry updatet (e.g. new timestamp)
 } DATAOP_RET;
 // some sanity checks
 #if DATA_ADDED != 0
@@ -26,6 +29,8 @@ typedef enum _data_op_return_values {
 #error Strange value for SFXHASH_ERR
 #endif /* SFXHASH_ERR >= 0 */
 
+/* get size of struct member */
+#define member_size(type, member) sizeof(((type *)0)->member)
 
 // some hashes store only keys, so this constant is used as a data ptr
 #define HASHMARK ((void*)0xdead)

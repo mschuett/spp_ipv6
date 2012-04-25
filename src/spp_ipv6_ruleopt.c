@@ -23,11 +23,7 @@
  *
  */
 
-#include "spp_ipv6_common.h"
-// for rule option:
-#include "sf_snort_plugin_api.h"
-// for IPv6_Rule_Hash
-#include "sfhashfcn.h"
+#include "spp_ipv6_ruleopt.h"
 
 extern uint_fast8_t ND_hdrlen[255];
 

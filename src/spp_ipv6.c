@@ -113,14 +113,14 @@ static void IPv6_PrintStats(int exiting __attribute__((unused)))
     _dpd.logMsg("% 10u dst unreachable\n",        context->stat->pkt_icmp_unreach);
     _dpd.logMsg("% 10u Other\n",                  context->stat->pkt_icmp_other);
 
-    _dpd.logMsg("\nAll routers (%d entries):\n", context->routers->entry_counter);
-    state_host_printlist(context->routers);
+    _dpd.logMsg("\nAll routers (%d entries):\n", sfxhash_count(context->routers));
+    hostset_print_all(context->routers);
 
-    _dpd.logMsg("\nAll hosts (%d entries):\n", context->hosts->entry_counter);
-    state_host_printlist(context->hosts);
+    _dpd.logMsg("\nAll hosts (%d entries):\n", sfxhash_count(context->hosts));
+    hostset_print_all(context->hosts);
 
-    _dpd.logMsg("\nAll hosts in DAD state (%d entries):\n", context->unconfirmed->entry_counter);
-    state_host_printlist(context->unconfirmed);
+    _dpd.logMsg("\nAll hosts in DAD state (%d entries):\n", sfxhash_count(context->unconfirmed));
+    hostset_print_all(context->unconfirmed);
 
     /*
     size_t size = 0;
@@ -153,12 +153,9 @@ static void IPv6_PrintStats(int exiting __attribute__((unused)))
  */
 static void IPv6_Init(char *args)
 {
-    struct IP_List_head    *prefixwl;
-    struct MAC_Entry_head  *routerwl;
-    struct MAC_Entry_head  *hostwl;
-    struct IPv6_Hosts_head *routers;
-    struct IPv6_Hosts_head *hosts;
-    struct IPv6_Hosts_head *unconf;
+    IP_set                 *prefixwl;
+    MAC_set                *routerwl;
+    MAC_set                *hostwl;
     struct IPv6_Statistics *stat;
     struct IPv6_State      *context;
     struct IPv6_Config     *config;
@@ -167,27 +164,16 @@ static void IPv6_Init(char *args)
         ipv6_config = sfPolicyConfigCreate();
     }
 
-    // allocate everything
-    prefixwl = (struct IP_List_head *)    calloc(1, sizeof (struct IP_List_head));
-    routerwl = (struct MAC_Entry_head *)  calloc(1, sizeof (struct MAC_Entry_head));
-    hostwl   = (struct MAC_Entry_head *)  calloc(1, sizeof (struct MAC_Entry_head));
-    routers  = (struct IPv6_Hosts_head *) calloc(1, sizeof (struct IPv6_Hosts_head));
-    hosts    = (struct IPv6_Hosts_head *) calloc(1, sizeof (struct IPv6_Hosts_head));
-    unconf   = (struct IPv6_Hosts_head *) calloc(1, sizeof (struct IPv6_Hosts_head));
+    // allocate everything, try to guess sensible default data struct sizes
+    prefixwl = macset_create( 5, 0, 0);
+    routerwl = macset_create( 8, 0, 0);
+    hostwl   = macset_create(32, 0, 0);
     stat     = (struct IPv6_Statistics *) calloc(1, sizeof (struct IPv6_Statistics));
     config   = (struct IPv6_Config *)     calloc(1, sizeof (struct IPv6_Config));
     context  = (struct IPv6_State *)      calloc(1, sizeof (struct IPv6_State));
-    if (!routerwl || !hostwl || !prefixwl || !routers || !hosts || !unconf
+    if (!routerwl || !hostwl || !prefixwl
         || !stat || !config || !context || !ipv6_config)
         _dpd.fatalMsg("Could not allocate IPv6 dyn-pp configuration struct.\n");
-
-    // initialize
-    STAILQ_INIT(prefixwl);
-    RB_INIT(&routerwl->data);
-    RB_INIT(&hostwl->data);
-    RB_INIT(&routers->data);
-    RB_INIT(&hosts->data);
-    RB_INIT(&unconf->data);
 
     config->router_whitelist = routerwl;
     config->host_whitelist   = hostwl;
@@ -197,12 +183,18 @@ static void IPv6_Init(char *args)
     context->config  = config;
     context->stat    = stat;
     
-    context->routers     = routers;
-    context->hosts       = hosts;
-    context->unconfirmed = unconf;
-    context->routers->entry_limit     = context->config->max_routers;
-    context->hosts->entry_limit       = context->config->max_hosts;
-    context->unconfirmed->entry_limit = context->config->max_unconfirmed;
+    // these are created after IPv6_Parse, so they can directly use user config values
+    context->routers     = hostset_create(3,
+            context->config->max_routers,
+            context->config->mem_routers);
+    context->hosts       = hostset_create(64,
+            context->config->max_hosts,
+            context->config->mem_hosts);
+    context->unconfirmed = hostset_create(256,
+            context->config->max_unconfirmed,
+            context->config->mem_unconfirmed);
+    if (!context->routers || !context->hosts || !context->unconfirmed)
+        _dpd.fatalMsg("Could not allocate IPv6 dyn-pp configuration struct.\n");
 
     sfPolicyUserPolicySet(ipv6_config, _dpd.getParserPolicy());
     sfPolicyUserDataSetCurrent(ipv6_config, context);
@@ -299,11 +291,11 @@ inline static void IPv6_UpdateStats(const SFSnortPacket *p, struct IPv6_Statisti
 inline static void IPv6_Process_Extensions(const SFSnortPacket *p, struct IPv6_State *context __attribute__((unused)))
 {
     uint_fast8_t i;
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGBASE,
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
             "IPv6_Process_Extensions() ext num = %d\n",
             p->num_ip6_extensions););
     for(i = 0; i < p->num_ip6_extensions; i++) {
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGBASE,
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
             "IPv6_Process_Extensions() ext type = %d\n",
             p->ip6_extensions[i].option_type););
 
@@ -453,6 +445,8 @@ inline static void IPv6_Process_ND_Options(const SFSnortPacket *p, struct IPv6_S
  */
 static void IPv6_Process_ICMPv6(const SFSnortPacket *p, struct IPv6_State *context)
 {
+    HOST_t *ip_entry;
+
     // safety check
     if (!p || !p->icmp_header) {
         _dpd.logMsg("IPv6 decoder problem. ICMP packet without struct icmp_header");
@@ -460,8 +454,8 @@ static void IPv6_Process_ICMPv6(const SFSnortPacket *p, struct IPv6_State *conte
     }
 
     /* check if ongoing DAD */
-    struct IPv6_Host *ip_entry;
-    ip_entry = get_host_entry(context->unconfirmed, &(p->ip6h->ip_dst));
+    ip_entry = hostset_get_by_ipmac(context->unconfirmed, mac_from_pkt(p), &(p->ip6h->ip_dst));
+    //get_host_entry(context->unconfirmed, &(p->ip6h->ip_dst));
     if (ip_entry) {
         ip_entry->type.dad.contacted++;
     }
@@ -480,16 +474,6 @@ static void IPv6_Process_ICMPv6(const SFSnortPacket *p, struct IPv6_State *conte
     default:
         break;
     }
-
-    /* periodically expire old entries from state */
-    if (p->pkt_header->ts.tv_sec >= context->next_expire) {
-        //DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "%s expire state\n", pprint_ts(p->pkt_header->ts.tv_sec)););
-        context->next_expire = p->pkt_header->ts.tv_sec + context->config->expire_run_interval;
-        state_host_expirelist(context->routers,     p->pkt_header->ts.tv_sec, context->config->keep_state_duration);
-        state_host_expirelist(context->hosts,       p->pkt_header->ts.tv_sec, context->config->keep_state_duration);
-        state_host_expirelist(context->unconfirmed, p->pkt_header->ts.tv_sec, context->config->keep_state_duration);
-    };
-
 }
 
 /**
@@ -509,13 +493,12 @@ static void IPv6_Process_ICMPv6_RA_stateless(const SFSnortPacket *p)
  */
 static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *context)
 {
-    struct IPv6_Host *hostentry;
     struct ICMPv6_RA *radv;
     struct nd_opt_hdr *option;
     struct nd_opt_prefix_info *prefix_info;
     sfip_t *prefix;
     uint_fast16_t len = p->ip_payload_size;
-    LISTOP_RET rc;
+    DATAOP_RET addrc;
     SFIP_RET sfip_rc;
 
     radv   = (struct ICMPv6_RA*) p->ip_payload;
@@ -533,9 +516,10 @@ static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *co
                 return;
             }
             sfip_set_bits(prefix, prefix_info->nd_opt_pi_prefix_len);
-            if (context->config->report_prefix_change && !ip_inlist(context->config->prefix_whitelist, prefix)) {
-                DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "IP prefix %s/%d not in "
-                    "configured list\n", sfip_to_str(prefix), sfip_bits(prefix)););
+            if (context->config->report_prefix_change
+                    && !ipset_contains(context->config->prefix_whitelist, ip_from_sfip(prefix))) {
+                DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "IP prefix %s not in "
+                    "configured list\n", ip_str(ip_from_sfip(prefix))););
                 ALERT(SID_ICMP6_RA_UNKNOWN_PREFIX);
             }
 
@@ -547,27 +531,29 @@ static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *co
         option = (struct nd_opt_hdr *) ((u_int8_t*) option + (8 * option->nd_opt_len));
     }
     // add state
-    rc = state_router_add(context->routers,
-                     &hostentry,
-                     &p->pkt_header->ts,
-                     p->ether_header->ether_source,
-                     &p->ip6h->ip_src,
-                     prefix, radv);
-
-    if (rc == LISTOP_ADDED) {
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "new IPv6 router advertised: %s / %s\n",
-                      pprint_mac(p->ether_header->ether_source),
-                      sfip_to_str(&p->ip6h->ip_src)););
+    HOST_t *entry;
+    entry = host_set(NULL, mac_from_pkt(p), ip_from_sfip(&p->ip6h->ip_src), ts_from_pkt(p));
+    host_setrouterdata(entry, radv->flags.all, radv->nd_ra_lifetime, prefix);
+    
+    addrc = hostset_add(context->routers, entry);
+    if (addrc == DATA_ADDED) {
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "new IPv6 router advertised: %s\n",
+                      host_str(entry)););
 
         // different events, depending on existing whitelist
         if (context->config->router_whitelist
-         && !RB_EMPTY(&context->config->router_whitelist->data)
-         && !get_mac_entry(context->config->router_whitelist,
-                           p->ether_header->ether_source)) {
+         && !macset_empty(context->config->router_whitelist)
+         && !macset_contains(context->config->router_whitelist, mac_from_pkt(p))) {
             ALERT(SID_ICMP6_INVALID_ROUTER_MAC);
         } else {
             ALERT(SID_ICMP6_RA_NEW_ROUTER);
         }
+    } else if (addrc == DATA_EXISTS) {
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "known IPv6 router advertised: %s\n",
+                      host_str(entry)););
+    } else {
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "error in processing RA: %s\n",
+                      host_str(entry)););
     }
 }
 
@@ -580,21 +566,23 @@ static void IPv6_Process_ICMPv6_NA(const SFSnortPacket *p, struct IPv6_State *co
     struct nd_neighbor_advert *na = (struct nd_neighbor_advert *) p->ip_payload;
     SFIP_RET sfrc;
     sfip_t *target_ip;
-    struct IPv6_Host *ip_entry;
-
+    HOST_t *ip_entry;
+    
     target_ip = sfip_alloc_raw(&na->nd_na_target, AF_INET6, &sfrc);
     if (sfrc != SFIP_SUCCESS) {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "sfip_alloc_raw failed in %s:%d\n", __FILE__, __LINE__););
         return;
     };
 
-    ip_entry = get_host_entry(context->unconfirmed, target_ip);
+    ip_entry = hostset_get_by_ipmac(context->unconfirmed, &DAD_MAC, target_ip);
     if (!ip_entry) {
         /* IP is yet unknown --> put into DAD state */
-        ip_entry = create_dad_entry_ifnew(context->unconfirmed,
-                                           &p->pkt_header->ts,
-                                           p->ether_header->ether_source,
-                                           target_ip);
+        DATAOP_RET addrc;
+        addrc = hostset_add(context->unconfirmed, host_set(NULL, &DAD_MAC, target_ip, ts_from_pkt(p)));
+        if (addrc != DATA_ADDED) {
+            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "DAD hostset_add failed\n"););
+            return;
+        }
         /* no DAD info, so simply trust NA
          *
          * TODO: this leads to new DoS opportunity
@@ -605,8 +593,14 @@ static void IPv6_Process_ICMPv6_NA(const SFSnortPacket *p, struct IPv6_State *co
         return;
     }
 
-    /* current DAD for this IP, now check details */
-    if (!memcmp(p->ether_header->ether_source, ip_entry->ether_source, MAC_LENGTH)) {
+    
+    /* TODO: the old tree-code could lookup by IP and then compare MACs
+     *  -- the new hash-code only stores IPs.
+     * Later it should store the MACs as well, but add a 2nd index to lookup by IP.
+     */
+#if 0
+    /* current DAD for this IP, now check details  XXX */
+    if (mac_eq((MAC_t*) p->ether_header->ether_source, ip_entry->mac)) {
         /* MAC matches -- same node */
         if (ip_entry->type.dad.contacted) {
             /* host entered the network */
@@ -621,8 +615,8 @@ static void IPv6_Process_ICMPv6_NA(const SFSnortPacket *p, struct IPv6_State *co
          * --> check if NA from known MAC (legitimate) or not (suspicious) */
         if (get_host_entry(context->hosts, target_ip)
             || get_host_entry(context->routers, target_ip)
-            || get_mac_entry(context->config->host_whitelist, p->ether_header->ether_source)
-            || get_mac_entry(context->config->router_whitelist, p->ether_header->ether_source)) {
+            || macset_contains(context->config->host_whitelist, mac_set(NULL, p->ether_header->ether_source))
+            || macset_contains(context->config->router_whitelist, mac_set(NULL, p->ether_header->ether_source))) {
             // looks legitimate
             DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "DAD collision with host %s / %s\n",
                           pprint_mac(p->ether_header->ether_source),
@@ -636,6 +630,7 @@ static void IPv6_Process_ICMPv6_NA(const SFSnortPacket *p, struct IPv6_State *co
             ALERT(SID_ICMP6_DAD_DOS);
         }
     }
+#endif /* 0 */
 }
 
 /**
@@ -645,8 +640,9 @@ static void IPv6_Process_ICMPv6_NS(const SFSnortPacket *p, struct IPv6_State *co
 {
     struct nd_neighbor_solicit *ns = (struct nd_neighbor_solicit *) p->ip_payload;
     SFIP_RET rc;
+    DATAOP_RET addrc;
     sfip_t *target_ip;
-    struct IPv6_Host *ip_entry;
+    HOST_t *ip_entry;
 
     target_ip = sfip_alloc_raw(&ns->nd_ns_target, AF_INET6, &rc);
     if (rc != SFIP_SUCCESS) {
@@ -668,25 +664,21 @@ static void IPv6_Process_ICMPv6_NS(const SFSnortPacket *p, struct IPv6_State *co
      * --> i.e. new node tries to get address
      * --> check if already known
      */
-    ip_entry = get_host_entry(context->hosts, target_ip);
+    ip_entry = hostset_get_by_ipmac(context->hosts, mac_from_pkt(p), target_ip);
     if (ip_entry) {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Neighbour solicitation from known host\n"););
         return;
     }
 
     /* this is the expected part: the IP is yet unknown --> put into DAD state */
-    ip_entry = create_dad_entry_ifnew(context->unconfirmed,
-                                       &p->pkt_header->ts,
-                                       p->ether_header->ether_source,
-                                       target_ip);
-    if (!ip_entry) {
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "create_dad_entry_ifnew failed in %s:%d\n", __FILE__, __LINE__););
+    addrc = hostset_add(context->unconfirmed, host_set(NULL, &DAD_MAC, target_ip, ts_from_pkt(p)));
+    if (addrc != DATA_ADDED) {
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "DAD hostset_add failed\n"););
         return;
     }
-    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "%s DAD started by %s / %s\n",
-                  pprint_ts(ip_entry->last_adv_ts),
-                  pprint_mac(ip_entry->ether_source),
-                  sfip_to_str(&ip_entry->ip)););
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "%s DAD started by %s\n",
+            ts_str(ip_entry->last_adv_ts),
+            host_str(ip_entry)););
     ALERT(SID_ICMP6_ND_NEW_DAD);
 }
 
@@ -705,7 +697,12 @@ void set_default_config(struct IPv6_Config *config)
     config->max_routers     = 32;
     config->max_hosts       = 8192;
     config->max_unconfirmed = 32768;
-
+    
+    /* TODO: add config option for memory cap */
+    config->mem_routers     = 1024*1024;
+    config->mem_hosts       = 1024*1024*2;
+    config->mem_unconfirmed = 1024*1024*8;
+    
     return;
 }
 
@@ -733,8 +730,7 @@ static void IPv6_Parse(char *args, struct IPv6_Config *config)
 {
     char *arg;
     char ismac;
-    sfip_t *prefix;
-    SFIP_RET rc;
+    IP_t *prefix;
 
     set_default_config(config);
     _dpd.logMsg("IPv6 preprocessor config:\n");
@@ -748,23 +744,24 @@ static void IPv6_Parse(char *args, struct IPv6_Config *config)
         if(!strcasecmp("router_mac", arg)) { // and now a list of 0-n router MACs
             config->report_new_routers = true;
             while ((arg = strtok(NULL, ", \t\n\r")) && (ismac = IS_MAC(arg))) {
-                mac_add(config->router_whitelist, arg);
+                macset_add(config->router_whitelist, mac_parse(NULL, arg));
+                //old_mac_add(config->router_whitelist, arg);
                 _dpd.logMsg("  default router MAC %s\n", arg);
             }
         } else if(!strcasecmp("host_mac", arg)) { // and now a list of 0-n host MACs
             config->report_new_hosts = true;
             while ((arg = strtok(NULL, ", \t\n\r")) && (ismac = IS_MAC(arg))) {
-                mac_add(config->host_whitelist, arg);
+                macset_add(config->host_whitelist, mac_parse(NULL, arg));
+                //old_mac_add(config->host_whitelist, arg);
                 _dpd.logMsg("  default host MAC %s\n", arg);
             }
         } else if(!strcasecmp("net_prefix", arg)) { // and now a list of 0-n prefixes
             config->report_prefix_change = true;
             while ((arg = strtok(NULL, ", \t\n\r")) && strchr(arg, '/')) {  // TODO remove /-check
-                prefix = sfip_alloc(arg, &rc);
-                if (rc == SFIP_SUCCESS) {
-                    add_ip(config->prefix_whitelist, prefix);
-                    _dpd.logMsg("  default net prefix %s/%d\n",
-                        sfip_to_str(prefix), sfip_bits(prefix));
+                prefix = ip_parse(NULL, arg);
+                if (prefix) {
+                    ipset_add(config->prefix_whitelist, prefix);
+                    _dpd.logMsg("  default net prefix %s\n", ip_str(prefix));
                 } else {
                     _dpd.fatalMsg("  Invalid prefix %s\n", arg);
                 }

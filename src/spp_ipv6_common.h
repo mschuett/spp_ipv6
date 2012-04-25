@@ -27,7 +27,7 @@
  ** Includes                                                         **
  **********************************************************************/
 #include "sf_types.h"
-#include "sfghash.h"
+#include "sfxhash.h"
 #include <time.h>
 #include <sys/time.h>
 #include <stdlib.h>
@@ -46,7 +46,6 @@
 #endif /* __linux__  */
 
 #include "preprocids.h"
-#include "sf_snort_packet.h"
 #include "sf_dynamic_preproc_lib.h"
 #include "sf_dynamic_preprocessor.h"
 #include "snort_debug.h"
@@ -75,5 +74,7 @@
 /**********************************************************************
  ** Function Prototypes                                              **
  **********************************************************************/
+
+#include "spp_ipv6_data_structs.h"
 
 #endif	/* _SPP_IPV6_COMMON_H */

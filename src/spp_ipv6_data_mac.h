@@ -16,11 +16,7 @@
 #include "sf_types.h"
 #include "sfxhash.h"
 #include "snort_debug.h"
-#include "spp_ipv6_constants.h"
 #include "spp_ipv6_data_common.h"
-
-// useful for memcpy calls
-#define MAC_LENGTH (6*sizeof(u_int8_t))
 
 /* verify string contains a MAC address */
 #define IS_MAC(string) ((string) != NULL                                     \
@@ -31,22 +27,37 @@
   && isxdigit((string)[12]) && isxdigit((string)[13]) && (string)[14] == ':' \
   && isxdigit((string)[15]) && isxdigit((string)[16]) && (string)[17] == '\0')
 
-typedef struct _MAC_node {
+typedef struct _MAC_t {
     u_int8_t mac[6];
-} MAC_node;
+} MAC_t;
 
 /* _very_ thin abstraction layer */
 typedef SFXHASH MAC_set;
 /* it would be nice to benchmark these options some time */
 #define MACSET_SPLAY   0
 #define MACSET_RECYCLE 1
+// length of string representation
+#define MAC_STR_BUFLEN 18
 
-int        mac_cmp(MAC_node *a, MAC_node *b);
-MAC_node  *mac_parse(const char* string, MAC_node *m);
-char      *mac_pprint(const MAC_node *m);
+// useful for memcpy calls
+#define MAC_LENGTH (6*sizeof(u_int8_t))
+
+// just for readability and to make future changes easier
+#define mac_from_pkt(p) ((MAC_t *) &(p->ether_header->ether_source))
+
+bool       mac_eq(const MAC_t *a, const MAC_t *b);
+int        mac_cmp(const MAC_t *a, const MAC_t *b);
+void       mac_cpy(MAC_t *dst, const MAC_t *src);
+MAC_t     *mac_parse(MAC_t *m, const char* string);
+char      *mac_str(const MAC_t *m);
+MAC_t     *mac_set(MAC_t *m, const u_int8_t ether_source[]);
 MAC_set   *macset_create(int count, int maxcount, int memsize);
-DATAOP_RET macset_add(MAC_set *s, MAC_node *m);
+void       macset_delete(MAC_set *s);
+DATAOP_RET macset_add(MAC_set *s, const MAC_t *m);
 DATAOP_RET macset_addstring(MAC_set *s, const char *mac);
-bool       macset_contains(MAC_set *s, MAC_node *m);
+DATAOP_RET macset_remove(MAC_set *s, const MAC_t *m);
+bool       macset_contains(MAC_set *s, const MAC_t *m);
+bool       macset_empty(MAC_set *s);
+int        macset_count(MAC_set *s);
 
 #endif	/* SPP_IPV6_DATA_MAC_H */

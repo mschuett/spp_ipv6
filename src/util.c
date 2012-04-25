@@ -14,7 +14,8 @@ void *SnortAlloc(unsigned long size)
 
     if(tmp == NULL)
     {
-        _dpd.fatalMsg("Unable to allocate memory!  (%lu requested)\n", size);
+        /* TODO  */
+        //_dpd.fatalMsg("Unable to allocate memory!  (%lu requested)\n", size);
     }
 
     return tmp;

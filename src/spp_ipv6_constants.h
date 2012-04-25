@@ -13,6 +13,8 @@
 #ifndef _SPP_IPV6_CONSTANTS_H
 #define	_SPP_IPV6_CONSTANTS_H
 
+#include "sf_snort_packet.h"
+
 /**********************************************************************
  ** Protocol Constants                                               **
  **********************************************************************/
@@ -77,30 +79,6 @@
 #define	IPPROTO_ETHERIP		97		/* Ethernet IP encapsulation */
 
 /**********************************************************************
- ** Protocol Data Formats                                            **
- **********************************************************************/
-
-/*
- * RA packet format
- */
-struct ICMPv6_RA {
-    /* fixed part */
-    struct _ICMP6 icmp6h;
-    u_int8_t  nd_ra_cur_hop_limit;
-    union {
-        u_int8_t m:1,
-                 o:1,
-                 h:1,
-               prf:2,
-               res:3;
-        u_int8_t all;
-    } flags;
-    u_int16_t nd_ra_lifetime;
-    u_int32_t nd_ra_reachable;
-    u_int32_t nd_ra_retransmit;
-} __attribute__((packed));
-
-/**********************************************************************
  ** Snort-Plugin Constants                                           **
  **********************************************************************/
 
@@ -115,6 +93,9 @@ struct ICMPv6_RA {
 // useful for memcpy calls
 #define MAC_LENGTH (6*sizeof(u_int8_t))
 
+// some hashes store only keys, so this constant is used as a data ptr
+#define HASHMARK ((void*)0xdead)
+        
 /**********************************************************************
  ** SIDs & descriptions for all alerts/warnings                      **
  **********************************************************************/

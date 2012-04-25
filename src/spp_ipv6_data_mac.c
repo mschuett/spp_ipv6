@@ -6,6 +6,9 @@
  * Data structures and functions to store a plain list of MAC addresses.
  * Currently a wrapper arround Snort's sfxhash.
  *
+ * A later optimization may replace some functions by macros, but during
+ * development I keep them for better debugging, testing, and type checking.
+ *
  */
 
 #include "spp_ipv6_data_mac.h"
@@ -14,11 +17,27 @@
 #include <stdio.h>
 
 /**
- * Compare MAC addesses
+ * Compare MAC addesses for equality.
  */
-int mac_cmp(MAC_node *a, MAC_node *b)
+bool mac_eq(const MAC_t *a, const MAC_t *b)
+{
+    return (0 == mac_cmp(a, b));
+}
+
+/**
+ * Compare MAC addesses.
+ */
+int mac_cmp(const MAC_t *a, const MAC_t *b)
 {
     return memcmp(&a->mac, &b->mac, sizeof(a->mac));
+}
+
+/**
+ * Copy MAC addesses
+ */
+void mac_cpy(MAC_t *dst, const MAC_t *src)
+{
+    memcpy(dst, src, sizeof(MAC_t));
 }
 
 /**
@@ -27,9 +46,9 @@ int mac_cmp(MAC_node *a, MAC_node *b)
  * 
  * MAC_node parameter is optional, if NULL then the static buffer is used.
  */
-MAC_node *mac_parse(const char* string, MAC_node *m)
+MAC_t *mac_parse(MAC_t *m, const char* string)
 {
-    static MAC_node node;
+    static MAC_t node;
     
     if (!m)
         m = &node;
@@ -43,11 +62,31 @@ MAC_node *mac_parse(const char* string, MAC_node *m)
 }
 
 /**
+ * Transform
+ * no input checking, arguments have to be valid
+ * 
+ * MAC_t parameter is optional, if NULL then the static buffer is used.
+ */
+MAC_t *mac_set(MAC_t *m, const u_int8_t ether_source[])
+{
+    static MAC_t node;
+    if (!m)
+        m = &node;
+    m->mac[0] = ether_source[0];
+    m->mac[1] = ether_source[1];
+    m->mac[2] = ether_source[2];
+    m->mac[3] = ether_source[3];
+    m->mac[4] = ether_source[4];
+    m->mac[5] = ether_source[5];
+    return m;
+}
+
+/**
  * Aux. function to format MAC address (in static buffer).
  */
-char *mac_pprint(const MAC_node *m)
+char *mac_str(const MAC_t *m)
 {
-    static char buf[18];
+    static char buf[MAC_STR_BUFLEN];
     snprintf(buf, sizeof(buf),
              "%02x:%02x:%02x:%02x:%02x:%02x",
              m->mac[0], m->mac[1],
@@ -62,7 +101,7 @@ MAC_set *macset_create(int count, int maxcount, int memsize)
     if (!count) // set default
         count = 20;
     s = sfxhash_new(count,
-            sizeof(MAC_node),
+            sizeof(MAC_t),
             0,
             memsize,
             0, NULL, NULL, MACSET_RECYCLE);
@@ -74,11 +113,19 @@ MAC_set *macset_create(int count, int maxcount, int memsize)
 }
 
 /**
+ * Delete and free macset.
+ */
+void macset_delete(MAC_set *s)
+{
+    sfxhash_delete(s);
+}
+
+/**
  * Add string MAC_node to a set.
  */
-DATAOP_RET macset_add(MAC_set *s, MAC_node *m)
+DATAOP_RET macset_add(MAC_set *s, const MAC_t *m)
 {
-    return sfxhash_add(s, m, HASHMARK);
+    return sfxhash_add(s, (MAC_t *) m, HASHMARK);
 }
 
 /**
@@ -86,18 +133,18 @@ DATAOP_RET macset_add(MAC_set *s, MAC_node *m)
  */
 DATAOP_RET macset_addstring(MAC_set *s, const char *mac)
 {
-    MAC_node *m;
-    m = mac_parse(mac, NULL);
+    MAC_t *m;
+    m = mac_parse(NULL, mac);
     return sfxhash_add(s, m, HASHMARK);
 }
 
 /**
  * check if set contains MAC
  */
-bool macset_contains(MAC_set *s, MAC_node *m)
+bool macset_contains(MAC_set *s, const MAC_t *m)
 {
-    MAC_node *k;
-    k = sfxhash_find(s, m);
+    MAC_t *k;
+    k = sfxhash_find(s, (MAC_t *)m);
     if (!k)
         return false;
     else {
@@ -105,4 +152,22 @@ bool macset_contains(MAC_set *s, MAC_node *m)
         assert(k == HASHMARK);
         return true;
     }
+}
+
+bool macset_empty(MAC_set *s)
+{
+    return (macset_count(s) == 0);
+}
+
+int macset_count(MAC_set *s)
+{
+    return sfxhash_count(s);
+}
+
+/**
+ * remove MAC from set
+ */
+DATAOP_RET macset_remove(MAC_set *s, const MAC_t *m)
+{
+    return sfxhash_remove(s, (MAC_t *) m);
 }

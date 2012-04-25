@@ -24,9 +24,7 @@
 #define	_SPP_IPV6_H
 
 #include "spp_ipv6_common.h"
-#include "spp_ipv6_constants.h"
-#include "spp_ipv6_data_structs.h"
-
+#include "spp_ipv6_ruleopt.h"
 
 /**********************************************************************
  ** Function Prototypes                                              **
@@ -45,10 +43,5 @@ inline static void IPv6_Process_Extensions(const SFSnortPacket *, struct IPv6_St
 static void IPv6_PrintStats(int);
 static void IPv6_ResetStats(int, void *);
 static void IPv6_Parse(char *, struct IPv6_Config *);
-
-int IPv6_Rule_Init(char *, char *, void **);
-int IPv6_Rule_Eval(void *, const u_int8_t **, void *);
-u_int32_t IPv6_Rule_Hash(void *);
-int IPv6_Rule_KeyCompare(void *, void *);
 
 #endif	/* _SPP_IPV6_H */

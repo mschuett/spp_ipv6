@@ -5,6 +5,9 @@
  *
  * Data structures and functions to store a plain list of IP addresses.
  *
+ * A later optimization may replace some functions by macros, but during
+ * development I keep them for better debugging, testing, and type checking.
+ *
  */
 
 #include "spp_ipv6_data_ip.h"
@@ -13,12 +16,48 @@
 #include <stdio.h>
 
 /**
- * Compare IP addesses
+ * Compare IP addesses for equality
  */
-int ip_cmp(IP_node *a, IP_node *b)
+bool ip_eq(const IP_t *a, const IP_t *b)
 {
-    return memcmp(&a->ip, &b->ip, sizeof(a->ip));
+    return (SFIP_EQUAL == sfip_compare((sfip_t *) a, (sfip_t *) b));
 }
+
+/**
+ * Compare IP addesses with memcmp return value.
+ */
+int ip_cmp(const IP_t *a, const IP_t *b)
+{
+    SFIP_RET rc;
+    rc = sfip_compare((sfip_t *) a, (sfip_t *) b);
+    switch (rc) {
+        case SFIP_LESSER:  return -1;
+        case SFIP_EQUAL:   return 0;
+        case SFIP_GREATER: return 1;
+        default:           return -2; // useful value here?
+    }
+}
+
+/**
+ * Copy IP address
+ */
+void ip_cpy(IP_t *dst, const IP_t *src)
+{
+    sfip_set_ip(dst, src);
+}
+
+/**
+ * Duplicate IP address (including malloc())
+ */
+IP_t *ip_dup(const IP_t *src)
+{
+    IP_t *dst;
+    dst = malloc(sizeof(IP_t));
+    sfip_set_ip(dst, src);
+    printf("ip_dup: %p --> %p\n", src, dst);
+    return dst;
+}
+
 
 /**
  * Parse a string IP into binary data
@@ -26,18 +65,37 @@ int ip_cmp(IP_node *a, IP_node *b)
  * 
  * IP_node parameter is optional, if NULL then the static buffer is used.
  */
-IP_node *ip_parse(const char* string, IP_node *m)
+IP_t *ip_parse(IP_t *dst, const char* string)
 {
-    static IP_node node;
+    static IP_t node;
     SFIP_RET status;
 
-    if (!m)
-        m = &node;
-    status = sfip_pton(string, m);
+    if (!dst)
+        dst = &node;
+    status = sfip_pton(string, dst);
 
     if (status != SFIP_SUCCESS)
-        m = NULL;
-    return m;
+        dst = NULL;
+    return dst;
+}
+
+/**
+ * Make IP_t from sfip_t.
+ * IP_t parameter is optional, if NULL then the static buffer is used.
+ * 
+ */
+IP_t *ip_set(IP_t *dst, const sfip_t *src)
+{
+    static IP_t node;
+    SFIP_RET status;
+
+    if (!dst)
+        dst = &node;
+    status = sfip_set_ip(dst, src);
+
+    if (status != SFIP_SUCCESS)
+        dst = NULL;
+    return dst;
 }
 
 /**
@@ -51,10 +109,10 @@ IP_node *ip_parse(const char* string, IP_node *m)
 /**
  * Aux. function to format IP address (in static buffer).
  */
-char *ip_pprint(const IP_node *m)
+char *ip_str(const IP_t *m)
 {
     if (ip_isprefix(m)) {
-        static char buf[INET6_ADDRSTRLEN+5]; // add space for prefixlen
+        static char buf[IP_STR_BUFLEN];
         snprintf(buf, sizeof(buf), "%s/%d",
                 sfip_to_str(m), sfip_bits((sfip_t*) m));
         return buf;
@@ -63,13 +121,30 @@ char *ip_pprint(const IP_node *m)
         return sfip_to_str(m);
 }
 
+/**
+ * Aux. function to print all IP addresses in set to stdout.
+ */
+void ipset_print_all(IP_set *s)
+{
+    IP_t *m;
+    SFXHASH_NODE *n;
+
+    n = sfxhash_findfirst(s);
+    while (n) {
+        m = n->key;
+        printf("'%s'\n", ip_str(m));
+        n = sfxhash_findnext(s);
+    }
+}
+
+
 IP_set *ipset_create(int count, int maxcount, int memsize)
 {
     IP_set *s;
     if (!count) // set default
         count = 20;
     s = sfxhash_new(count,
-            sizeof(IP_node),
+            sizeof(IP_t),
             0,
             memsize,
             0, NULL, NULL, IPSET_RECYCLE);
@@ -81,30 +156,38 @@ IP_set *ipset_create(int count, int maxcount, int memsize)
 }
 
 /**
+ * Delete and free IPset.
+ */
+void ipset_delete(IP_set *s)
+{
+    sfxhash_delete(s);
+}
+
+/**
  * Add IP_node to a set.
  */
-DATAOP_RET ipset_add(IP_set *s, IP_node *m)
+DATAOP_RET ipset_add(IP_set *s, const IP_t *m)
 {
-    return sfxhash_add(s, m, HASHMARK);
+    return sfxhash_add(s, (IP_t *) m, HASHMARK);
 }
 
 /**
  * Add string IP to a set.
  */
-DATAOP_RET ipset_addstring(IP_set *s, const char *mac)
+DATAOP_RET ipset_addstring(IP_set *s, const char *ipstr)
 {
-    IP_node *m;
-    m = ip_parse(mac, NULL);
+    IP_t *m;
+    m = ip_parse(NULL, ipstr);
     return sfxhash_add(s, m, HASHMARK);
 }
 
 /**
  * check if set contains IP
  */
-bool ipset_contains(IP_set *s, IP_node *m)
+bool ipset_contains(IP_set *s, const IP_t *m)
 {
-    IP_node *k;
-    k = sfxhash_find(s, m);
+    IP_t *k;
+    k = sfxhash_find(s, (IP_t *) m);
     if (!k)
         return false;
     else {
@@ -112,4 +195,22 @@ bool ipset_contains(IP_set *s, IP_node *m)
         assert(k == HASHMARK);
         return true;
     }
+}
+
+/**
+ * remove IP from set
+ */
+int ipset_remove(IP_set *s, const IP_t *m)
+{
+    return sfxhash_remove(s, (IP_t *) m);
+}
+
+bool ipset_empty(IP_set *s)
+{
+    return (ipset_count(s) == 0);
+}
+
+int ipset_count(IP_set *s)
+{
+    return sfxhash_count(s);
 }
