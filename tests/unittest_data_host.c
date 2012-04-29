@@ -8,44 +8,6 @@
 #include "CUnit/Basic.h"
 #include "spp_ipv6_data_host.h"
 
-// some random values for testing. hostdata has to be NULL terminated
-// and have less or equal length than ipdata.
-static char *host_macdata[] = {
-    "ec:ac:24:70:4c:f6",
-    "EC:AC:24:70:4C:F7",
-    "Ec:aC:24:70:4c:F8",
-    "38:45:63:f6:8e:83",
-    "f7:d5:9c:38:8f:db",
-    "bf:de:9e:0e:6e:eb",
-    "b6:f5:bf:ff:c2:32",
-    "83:23:3d:f2:17:31",
-    "26:3e:f2:4e:0d:ff",
-    "d4:fc:84:dc:81:a9",
-    "d4:fc:84:dc:81:a9",
-    "d4:fc:84:dc:81:a9",
-    "d4:fc:84:dc:81:a9",
-    "d4:fc:84:dc:81:a9",
-    NULL
-};
-
-static char *host_ipdata[] = {
-    "ffe5:1838:afd7:2472:b3e7:3ae6:a228:12b4",
-    "ffe5:1838:afd7:2472:b3e7:3ae6:a228:12b4",
-    "ffe5:1838:afd7:2472:b3e7:3ae6:a228:12b4",
-    "ffe5:1838:afd7:2472:b3e7:3ae6:a228:12b4",
-    "ffe5:1838:afd7:2472:b3e7:3ae6:a228:12b4",
-    "0E51:A030:C113:3838:C080:DD09:4D6C:189D",
-    "9af2:2354:ecd1:f412:b9e3:648C:519D:DDDF",
-    "69df:0c97:aaff:ef86:7cc0:ede5:2a7b:6cc0",
-    "4605:da5a:9f0f:8a36:f63a:e40a:1614:0554",
-    "6956:2caa:6abf:f6b2:3c57:a99c:d88d:ff7d",
-    "4a7d:e4d7:54ea:48ed:8467:6b59:3670:a941",
-    "1d24:c623:219a:0aa1:7628:51ce:870a:898f",
-    "5e0f:1e4b:e619:d99f:dd65:caf1:12a5:01fc",
-    "8693:39c0:36de:d326:cb63:a585:c63e:2f04",
-    NULL
-};
-
 /* a == b, using m and i; and a != c != d */
 static const MAC_t m = {{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}};
 static const IP_t i = {
