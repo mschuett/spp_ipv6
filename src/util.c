@@ -3,6 +3,7 @@
  * for use in this plugin.
  */
 
+#include <stdarg.h>
 #include "spp_ipv6_common.h"
 #include "util.h"
 
@@ -14,8 +15,7 @@ void *SnortAlloc(unsigned long size)
 
     if(tmp == NULL)
     {
-        /* TODO  */
-        //_dpd.fatalMsg("Unable to allocate memory!  (%lu requested)\n", size);
+        _dpd.fatalMsg("Unable to allocate memory!  (%lu requested)\n", size);
     }
 
     return tmp;
@@ -60,4 +60,23 @@ int SnortStrncpy(char *dst, const char *src, size_t dst_size)
     }
 
     return SNORT_STRNCPY_SUCCESS;
+}
+
+/*
+ * Function: LogMessage(const char *, ...)
+ *
+ * Purpose: Print a message to stderr or with logfacility.
+ *
+ * Arguments: format => the formatted error string to print out
+ *            ... => format commands/fillers
+ *
+ * Returns: void function
+ */
+void LogMessage(const char *format,...)
+{
+    va_list ap;
+
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
 }

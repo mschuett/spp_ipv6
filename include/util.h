@@ -7,5 +7,6 @@
 
 int SnortStrncpy(char *, const char *, size_t);
 void *SnortAlloc(unsigned long);
+void LogMessage(const char *,...);
 
 #endif /*__UTIL_H__*/

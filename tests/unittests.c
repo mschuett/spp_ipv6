@@ -9,6 +9,11 @@
 #include <stdlib.h>
 #include "CUnit/Basic.h"
 
+#include "sf_types.h"
+#include "sf_dynamic_preprocessor.h"
+#include "util.h"
+DynamicPreprocessorData _dpd;
+
 void test_data_common();
 void test_ts_str();
 
@@ -58,18 +63,17 @@ void testDAD_get();
  * CUnit Test Suite
  */
 
-int init_suite(void) {
+int init_plugin_deps(void) {
+    _dpd.logMsg   = &LogMessage;
+    _dpd.fatalMsg = &LogMessage;
     return 0;
 }
-
-int clean_suite(void) {
-    return 0;
-}
-
 
 int main() {
     CU_pSuite pSuite = NULL;
 
+    init_plugin_deps();
+    
     /* Initialize the CUnit test registry */
     if (CUE_SUCCESS != CU_initialize_registry())
         return CU_get_error();

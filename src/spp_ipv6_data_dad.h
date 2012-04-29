@@ -21,10 +21,14 @@
 
 #include "spp_ipv6_data_structs.h"
 
+#include "sf_dynamic_preprocessor.h"
+extern DynamicPreprocessorData _dpd;
+
+typedef IP_set DAD_set;
 /**
  * create DAD state
  */
-static inline IP_set *dad_create(int count)
+static inline DAD_set *dad_create(int count)
 {
     // do not change the data structure, i.e. no userfree() etc.
     return ipset_create(count);
@@ -33,7 +37,7 @@ static inline IP_set *dad_create(int count)
 /**
  * delete DAD state
  */
-static inline void dad_delete(IP_set *s)
+static inline void dad_delete(DAD_set *s)
 {
     MAC_set *ms;
     SFGHASH_NODE *n;
@@ -53,7 +57,7 @@ static inline void dad_delete(IP_set *s)
 /**
  * add HOST_t to DAD state
  */
-static inline DATAOP_RET dad_add(IP_set *s, const HOST_t *h)
+static inline DATAOP_RET dad_add(DAD_set *s, const HOST_t *h)
 {
     bool new_macset = false;
     DATAOP_RET rc;
@@ -89,7 +93,7 @@ static inline DATAOP_RET dad_add(IP_set *s, const HOST_t *h)
 /**
  * add host to DAD state
  */
-static inline DATAOP_RET dad_add_by_ipmac(IP_set *s, const IP_t *i, const MAC_t *m, time_t ts)
+static inline DATAOP_RET dad_add_by_ipmac(DAD_set *s, const IP_t *i, const MAC_t *m, time_t ts)
 {
     HOST_t pivot;
     host_set(&pivot, m, i, ts);
@@ -101,7 +105,7 @@ static inline DATAOP_RET dad_add_by_ipmac(IP_set *s, const IP_t *i, const MAC_t 
 /**
  * remove HOST_t from DAD state
  */
-static inline DATAOP_RET dad_remove(IP_set *s, const HOST_t *h)
+static inline DATAOP_RET dad_remove(DAD_set *s, const HOST_t *h)
 {
     DATAOP_RET rc;
     MAC_set *p;
@@ -123,7 +127,7 @@ static inline DATAOP_RET dad_remove(IP_set *s, const HOST_t *h)
 /**
  * count DAD entries
  */
-static inline int dad_count(IP_set *s)
+static inline int dad_count(DAD_set *s)
 {
     int c = 0;
     MAC_set *ms;
@@ -143,7 +147,7 @@ static inline int dad_count(IP_set *s)
 /**
  * get DAD state
  */
-static inline HOST_t *dad_get(IP_set *s, const HOST_t *h)
+static inline HOST_t *dad_get(DAD_set *s, const HOST_t *h)
 {
     MAC_set *ms;
     HOST_t  *result;
@@ -158,10 +162,32 @@ static inline HOST_t *dad_get(IP_set *s, const HOST_t *h)
 /**
  * check DAD state existance
  */
-static inline bool dad_contains(IP_set *s, const HOST_t *h)
+static inline bool dad_contains(DAD_set *s, const HOST_t *h)
 {
     return NULL != dad_get(s, h);
 }
 
+/**
+ * print all DAD entries
+ */
+static inline void dad_print_all(DAD_set *s)
+{
+    SFGHASH_NODE *n, *o;
+    MAC_set *ms;
+   
+    _dpd.logMsg("DAD set with %d entries:\n", dad_count(s));
+    n = sfghash_findfirst(s);
+    while (n) {
+        ms = n->data;
+        o = sfghash_findfirst(ms);
+        while (o) {
+            HOST_t *host = o->data;
+            _dpd.logMsg("%s\n", host_str(host));
+            // assert(!host->type.router.prefix && host->type.dad.contacted == MAGICMARKER);
+            o = sfghash_findnext(ms);
+        }
+        n = sfghash_findnext(s);
+    }
+}
 
 #endif	/* SPP_IPV6_DATA_DAD_H */

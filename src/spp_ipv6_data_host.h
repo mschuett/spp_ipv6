@@ -89,17 +89,4 @@ static inline HOST_t *host_dad_set(HOST_t *h, const IP_t *i, time_t t)
     return host_set(h, &DAD_MAC, i, t);
 }
 
-
-/* to test hostset_print_all without running Snort pluginbase */
-#if defined(TESTPROG)
-#warning testprog
-#define PRINT_FCTN(x, ...) printf(x, ...)
-#elif defined(CUNITTEST)
-#warning cunit
-#define PRINT_FCTN(x, ...) {}
-#elif !defined(TESTPROG)
-#warning snortlib
-#define PRINT_FCTN(x, ...) _dpd.logMsg(x, ...)
-#endif /* defined(CU_VERSION) || defined(TEST) */
-
 #endif	/* SPP_IPV6_DATA_HOST_H */

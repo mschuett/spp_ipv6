@@ -15,6 +15,12 @@
 #include "sf_dynamic_preprocessor.h"
 DynamicPreprocessorData _dpd;
 
+int init_plugin_deps(void) {
+    _dpd.logMsg   = &LogMessage;
+    _dpd.fatalMsg = &LogMessage;
+    return 0;
+}
+
 #include "spp_ipv6_data_mac.h"
 #include "spp_ipv6_data_ip.h"
 #include "spp_ipv6_data_host.h"
@@ -365,5 +371,6 @@ int test_host()
 
 int main(int argc, char** argv)
 {
+    init_plugin_deps();
     return test_mac() || test_ip() || test_host();
 }

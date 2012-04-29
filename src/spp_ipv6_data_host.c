@@ -11,6 +11,9 @@
 #include "spp_ipv6_data_host.h"
 #include <assert.h>
 
+#include "sf_dynamic_preprocessor.h"
+extern DynamicPreprocessorData _dpd;
+
 /**
  * Compare HOSTs for equality
  * TODO: see whether a host_cmp would be needed/useful.
@@ -62,11 +65,11 @@ void hostset_print_all(HOST_set *s)
     HOST_t *host;
     SFXHASH_NODE *n;
    
-    PRINT_FCTN("Hostset with %d entries:\n", hostset_count(s));
+    _dpd.logMsg("Hostset with %d entries:\n", hostset_count(s));
     n = sfxhash_findfirst(s);
     while (n) {
         host = n->data;
-        PRINT_FCTN("%s\n", host_str(host));
+        _dpd.logMsg("%s\n", host_str(host));
         assert(host->type.router.prefix || host->type.dad.contacted == MAGICMARKER);
         
         n = sfxhash_findnext(s);
