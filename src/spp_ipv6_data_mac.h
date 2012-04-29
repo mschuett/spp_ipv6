@@ -53,8 +53,10 @@ MAC_set   *macset_create(int count);
 void       macset_delete(MAC_set *s);
 DATAOP_RET macset_add(MAC_set *s, const MAC_t *m);
 DATAOP_RET macset_addstring(MAC_set *s, const char *mac);
+DATAOP_RET macset_add_host(MAC_set *s, const void *h);
 DATAOP_RET macset_remove(MAC_set *s, const MAC_t *m);
 bool       macset_contains(MAC_set *s, const MAC_t *m);
+void      *macset_get(MAC_set *s, const MAC_t *m);
 bool       macset_empty(MAC_set *s);
 int        macset_count(MAC_set *s);
 

@@ -143,9 +143,7 @@ IP_set *ipset_create(int count)
     IP_set *s;
     if (!count) // set default
         count = 20;
-    s = sfghash_new(count,
-            sizeof(IP_t),
-            0, NULL);
+    s = sfghash_new(count, sizeof(IP_t), 0, NULL);
     return s;
 }
 
@@ -166,6 +164,14 @@ DATAOP_RET ipset_add(IP_set *s, const IP_t *m)
 }
 
 /**
+ * Add IP_node to a set.
+ */
+DATAOP_RET ipset_add_data(IP_set *s, const IP_t *m, const void *data)
+{
+    return sfghash_add(s, (IP_t *) m, (void *) data);
+}
+
+/**
  * Add string IP to a set.
  */
 DATAOP_RET ipset_addstring(IP_set *s, const char *ipstr)
@@ -180,15 +186,15 @@ DATAOP_RET ipset_addstring(IP_set *s, const char *ipstr)
  */
 bool ipset_contains(IP_set *s, const IP_t *m)
 {
-    IP_t *k;
-    k = sfghash_find(s, (IP_t *) m);
-    if (!k)
-        return false;
-    else {
-        // quick sanity check
-        assert(k == HASHMARK);
-        return true;
-    }
+    return (NULL != sfghash_find(s, (IP_t *) m));
+}
+
+/**
+ * check if set contains IP
+ */
+void *ipset_get(IP_set *s, const IP_t *m)
+{
+    return sfghash_find(s, (IP_t *) m);
 }
 
 /**

@@ -12,6 +12,7 @@
  */
 
 #include "spp_ipv6_data_mac.h"
+#include "spp_ipv6_data_host.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -62,7 +63,7 @@ MAC_t *mac_parse(MAC_t *m, const char* string)
 }
 
 /**
- * Transform
+ * Transform int array to MAC_t
  * no input checking, arguments have to be valid
  * 
  * MAC_t parameter is optional, if NULL then the static buffer is used.
@@ -82,7 +83,7 @@ MAC_t *mac_set(MAC_t *m, const u_int8_t ether_source[])
 }
 
 /**
- * Aux. function to format MAC address (in static buffer).
+ * format MAC address (in static buffer).
  */
 char *mac_str(const MAC_t *m)
 {
@@ -95,6 +96,9 @@ char *mac_str(const MAC_t *m)
     return buf;
 }
 
+/**
+ * create/alloc new MAC set
+ */
 MAC_set *macset_create(int count)
 {
     MAC_set *s;
@@ -109,6 +113,18 @@ MAC_set *macset_create(int count)
  */
 void macset_delete(MAC_set *s)
 {
+    HOST_t *data;
+    SFGHASH_NODE *n;
+
+    n = sfghash_findfirst(s);
+    while (n) {
+        data = n->data;
+        if (data && data != HASHMARK) {
+            host_free(data);
+        }
+        n = sfghash_findnext(s);
+    }
+    
     sfghash_delete(s);
 }
 
@@ -131,26 +147,52 @@ DATAOP_RET macset_addstring(MAC_set *s, const char *mac)
 }
 
 /**
+ * Add string MAC_node to a set.
+ */
+DATAOP_RET macset_add_data(MAC_set *s, const MAC_t *m, const void *data)
+{
+    return sfghash_add(s, (MAC_t *) m, (void *) data);
+}
+
+
+/**
+ * add HOST_t to MAC_set
+ */
+DATAOP_RET macset_add_host(MAC_set *s, const void *data)
+{
+    HOST_t *h = (HOST_t *) data;
+    if (!h)
+        return DATA_ERROR;
+    return macset_add_data(s, &h->mac, h);
+}
+
+/**
  * check if set contains MAC
  */
 bool macset_contains(MAC_set *s, const MAC_t *m)
 {
-    MAC_t *k;
-    k = sfghash_find(s, (MAC_t *)m);
-    if (!k)
-        return false;
-    else {
-        // quick sanity check
-        assert(k == HASHMARK);
-        return true;
-    }
+    return (NULL != sfghash_find(s, (MAC_t *)m));
 }
 
+/**
+ * get set entry data
+ */
+void *macset_get(MAC_set *s, const MAC_t *m)
+{
+    return sfghash_find(s, (MAC_t *)m);
+}
+
+/**
+ * test if set is empty
+ */
 bool macset_empty(MAC_set *s)
 {
     return (macset_count(s) == 0);
 }
 
+/**
+ * count set entries
+ */
 int macset_count(MAC_set *s)
 {
     return sfghash_count(s);
