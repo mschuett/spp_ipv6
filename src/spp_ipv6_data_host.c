@@ -215,7 +215,7 @@ int hostset_userfree(void *key, void *data)
 {
     HOST_t *h = (HOST_t*) data;
     
-    printf("hostset_userfree: %p, %p\n", data, h->type.router.prefix);
+    //printf("hostset_userfree: %p, %p\n", data, h->type.router.prefix);
     sfip_free(h->type.router.prefix);
     //free(data);
 
