@@ -36,15 +36,6 @@
 #include <sys/queue.h>
 #include <errno.h>
 
-#ifdef __linux__
-#ifndef __unused
-#define __unused __attribute__((__unused__)) 
-#endif /* __unused */
-#include "tree.h"
-#else /* BSD */
-#include <sys/tree.h>
-#endif /* __linux__  */
-
 #include "preprocids.h"
 #include "sf_dynamic_preproc_lib.h"
 #include "sf_dynamic_preprocessor.h"
