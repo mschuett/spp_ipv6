@@ -11,7 +11,8 @@
 
 // h are 'normal' MAC/IP pairs;
 // g has hosts with the same IP but all different MACs
-static HOST_t h[10], g[10];
+#define EXAMPLE_LEN 10
+static HOST_t h[EXAMPLE_LEN], g[EXAMPLE_LEN];
 
 int testDAD_init_suite() {
     char *macdata[] = {
@@ -35,11 +36,11 @@ int testDAD_init_suite() {
     int i;
     
     ip_parse(&ip, ipstr);
-    
-    for (i = 0; i < 10; i++) {
+
+    for (i = 0; i < EXAMPLE_LEN; i++) {
         host_set(&h[i], mac_parse(NULL, macdata[i]), ip_parse(NULL, ipdata[i]), 0);
     }
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < EXAMPLE_LEN; i++) {
         host_set(&g[i], mac_parse(NULL, macdata[i]), &ip, 0);
     }
     return 0;
@@ -56,22 +57,42 @@ void testDAD_create() {
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, ipset_count(s));
     CU_ASSERT_EQUAL(0, dad_count(s));
-    ipset_delete(s);
+    dad_delete(s);
 
     s = dad_create(10);
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, ipset_count(s));
     CU_ASSERT_EQUAL(0, dad_count(s));
-    ipset_delete(s);
+    dad_delete(s);
 
     s = dad_create(10240);
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, ipset_count(s));
     CU_ASSERT_EQUAL(0, dad_count(s));
-    ipset_delete(s);
+    dad_delete(s);
 }
 
 void testDAD_add() {
+    IP_set *s;
+    DATAOP_RET rc;
+    
+    s = dad_create(20);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
+    CU_ASSERT_EQUAL(0, dad_count(s));
+    
+    rc = dad_add(s, &h[0]);
+    CU_ASSERT_EQUAL(rc, DATA_ADDED);
+    CU_ASSERT_EQUAL(1, dad_count(s));
+    dad_print_all(s);
+    
+    rc = dad_add(s, &g[0]);
+    CU_ASSERT_EQUAL(rc, DATA_ADDED);
+    CU_ASSERT_EQUAL(2, dad_count(s));
+
+    dad_delete(s);
+}
+
+void testDAD_addall() {
     IP_set *s;
     DATAOP_RET rc;
     int i;
@@ -80,7 +101,7 @@ void testDAD_add() {
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, dad_count(s));
     
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < EXAMPLE_LEN; i++) {
         CU_ASSERT_EQUAL(2*i, dad_count(s));
         rc = dad_add(s, &h[i]);
         CU_ASSERT_EQUAL(rc, DATA_ADDED);
@@ -91,7 +112,7 @@ void testDAD_add() {
     }
     CU_ASSERT_EQUAL(20, dad_count(s));
 
-    ipset_delete(s);
+    dad_delete(s);
 }
 
 void testDAD_add_by_ipmac() {
@@ -103,14 +124,14 @@ void testDAD_add_by_ipmac() {
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, dad_count(s));
     
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < EXAMPLE_LEN; i++) {
         rc = dad_add_by_ipmac(s, &h[i].ip, &h[i].mac, h[i].last_adv_ts);
         CU_ASSERT_EQUAL(rc, DATA_ADDED);
         rc = dad_add_by_ipmac(s, &g[i].ip, &g[i].mac, g[i].last_adv_ts);
         CU_ASSERT_EQUAL(rc, DATA_ADDED);
     }
     CU_ASSERT_EQUAL(20, dad_count(s));
-    ipset_delete(s);
+    dad_delete(s);
 }
 
 void testDAD_remove() {
@@ -122,7 +143,7 @@ void testDAD_remove() {
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, dad_count(s));
     
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < EXAMPLE_LEN; i++) {
         rc = dad_add(s, &h[i]);
         rc = dad_add(s, &g[i]);
     }
@@ -146,7 +167,7 @@ void testDAD_remove() {
     CU_ASSERT_EQUAL(rc, DATA_ERROR);
     CU_ASSERT_EQUAL(16, dad_count(s));
 
-    ipset_delete(s);
+    dad_delete(s);
 }
 
 
@@ -158,14 +179,14 @@ void testDAD_get() {
     
     s = dad_create(20);
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < EXAMPLE_LEN; i++) {
         rc = dad_add(s, &h[i]);
         rc = dad_add(s, &g[i]);
     }
     CU_ASSERT_EQUAL_FATAL(20, dad_count(s));
     // set up complete
 
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < EXAMPLE_LEN; i++) {
         ptr = dad_get(s, &h[i]);
         CU_ASSERT_TRUE(host_eq(ptr, &h[i]));
         CU_ASSERT_TRUE(dad_contains(s, &h[i]));
@@ -181,6 +202,6 @@ void testDAD_get() {
     ptr = dad_get(s, &h[2]);
     CU_ASSERT_PTR_NULL(ptr);
 
-    ipset_delete(s);
+    dad_delete(s);
 }
 

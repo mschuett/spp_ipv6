@@ -55,6 +55,7 @@ void testHostset_remove();
 int testDAD_init_suite();
 void testDAD_create();
 void testDAD_add();
+void testDAD_addall();
 void testDAD_add_by_ipmac();
 void testDAD_remove();
 void testDAD_get();
@@ -168,12 +169,13 @@ int main() {
     /* Add the tests to the suite */
     if ((NULL == CU_add_test(pSuite, "testDAD_create",       testDAD_create))       ||
         (NULL == CU_add_test(pSuite, "testDAD_add",          testDAD_add))          ||
+        (NULL == CU_add_test(pSuite, "testDAD_addall",       testDAD_addall))       ||
         (NULL == CU_add_test(pSuite, "testDAD_add_by_ipmac", testDAD_add_by_ipmac)) ||
-        (NULL == CU_add_test(pSuite, "testDAD_get",          testDAD_get))) {
+        (NULL == CU_add_test(pSuite, "testDAD_get",          testDAD_get)) ) {
         CU_cleanup_registry();
         return CU_get_error();
     }
-    
+
     /* Run all tests using the CUnit Basic interface */
     CU_basic_set_mode(CU_BRM_VERBOSE);
     CU_basic_run_tests();
