@@ -42,6 +42,7 @@ char      *ip_str(const IP_t *m);
 void       ipset_print_all(IP_set *s);
 IP_set    *ipset_create(int count);
 void       ipset_delete(IP_set *s);
+void       ipset_dad_userfree(void *p);
 DATAOP_RET ipset_add(IP_set *s, const IP_t *m);
 DATAOP_RET ipset_add_data(IP_set *s, const IP_t *m, const void *data);
 DATAOP_RET ipset_addstring(IP_set *s, const char *ipstr);

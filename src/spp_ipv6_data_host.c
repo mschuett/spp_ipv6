@@ -116,7 +116,8 @@ void host_setrouterdata(HOST_t *h, u_int8_t ra_flags, u_int16_t ra_lifetime, sfi
  */
 void host_free(HOST_t *h)
 {
-    if (h->type.router.prefix)
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "host_free: %p\n", h););
+    if (h && h->type.router.prefix)
         sfip_free(h->type.router.prefix);
     free(h);
 }
@@ -131,7 +132,7 @@ HOST_set *hostset_create(int count, int maxcount, int memsize)
         count = 100;
     s = sfxhash_new(count,
             member_size(HOST_t, mac) + member_size(HOST_t, ip),
-            sizeof(HOST_t),
+            sizeof(HOST_t),    // determines whether sfxhash will alloc memory for us
             memsize,
             0, NULL,
             hostset_userfree, HOSTSET_RECYCLE);
@@ -151,10 +152,13 @@ void hostset_delete(HOST_set *s)
 }
 
 /**
- * Add string HOST_node to a set.
+ * allocate/copy new HOST_t and add to set.
  */
 DATAOP_RET hostset_add(HOST_set *s, const HOST_t *h)
 {
+    if (!h)
+        return DATA_ERROR;
+
     return sfxhash_add(s, (HOST_t *) h, (HOST_t *) h);
 }
 
@@ -212,15 +216,18 @@ bool hostset_empty(HOST_set *s)
 }
 
 /**
- * Aux. function to free an entry when removing from hostset
+ * Aux. function to free an entry when removing from hostset.
+ * The data is freed'd by sfxhash itself, we _only_ have to free
+ * any additional references inside, i.e. the prefix for routers.
  */
 int hostset_userfree(void *key, void *data)
 {
     HOST_t *h = (HOST_t*) data;
     
-    //printf("hostset_userfree: %p, %p\n", data, h->type.router.prefix);
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
+            "hostset_userfree: %p with prefix %p\n",
+            data, h->type.router.prefix););
     sfip_free(h->type.router.prefix);
-    //free(data);
-
+ 
     return 0;
 }

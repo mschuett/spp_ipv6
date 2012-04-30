@@ -97,14 +97,14 @@ char *mac_str(const MAC_t *m)
 }
 
 /**
- * create/alloc new MAC set
+ * allocate and create new MAC set
  */
 MAC_set *macset_create(int count)
 {
     MAC_set *s;
     if (!count) // set default
         count = 20;
-    s = sfghash_new(count, sizeof(MAC_t), 0, NULL);
+    s = sfghash_new(count, sizeof(MAC_t), 0, macset_dad_userfree);
     return s;
 }
 
@@ -113,23 +113,20 @@ MAC_set *macset_create(int count)
  */
 void macset_delete(MAC_set *s)
 {
-    HOST_t *data;
-    SFGHASH_NODE *n;
-
-    n = sfghash_findfirst(s);
-    while (n) {
-        data = n->data;
-        if (data && data != HASHMARK) {
-            host_free(data);
-        }
-        n = sfghash_findnext(s);
-    }
-    
     sfghash_delete(s);
 }
 
 /**
- * Add string MAC_node to a set.
+ * Free macset entries, here either HASHMARKs or HOST_ts.
+ */
+void macset_dad_userfree(void *p)
+{
+    if (p && p != HASHMARK)
+        host_free(p);
+}
+
+/**
+ * Add a MAC_t key to a set.
  */
 DATAOP_RET macset_add(MAC_set *s, const MAC_t *m)
 {
@@ -137,7 +134,7 @@ DATAOP_RET macset_add(MAC_set *s, const MAC_t *m)
 }
 
 /**
- * Add string MAC to a set.
+ * Add string MAC key to a set.
  */
 DATAOP_RET macset_addstring(MAC_set *s, const char *mac)
 {
@@ -147,7 +144,8 @@ DATAOP_RET macset_addstring(MAC_set *s, const char *mac)
 }
 
 /**
- * Add string MAC_node to a set.
+ * Add a MAC_t with data to a set
+ * (m is copied, but the data isn't).
  */
 DATAOP_RET macset_add_data(MAC_set *s, const MAC_t *m, const void *data)
 {
@@ -156,14 +154,23 @@ DATAOP_RET macset_add_data(MAC_set *s, const MAC_t *m, const void *data)
 
 
 /**
- * add HOST_t to MAC_set
+ * allocate and add HOST_t to MAC_set.
  */
 DATAOP_RET macset_add_host(MAC_set *s, const void *data)
 {
-    HOST_t *h = (HOST_t *) data;
-    if (!h)
+    HOST_t *newentry;
+    if (!data)
         return DATA_ERROR;
-    return macset_add_data(s, &h->mac, h);
+
+    newentry = malloc(sizeof(HOST_t));
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
+            "macset_add_host: alloc HOST_t (%d bytes) @ %p\n",
+            sizeof(HOST_t), newentry););
+    if (!newentry)
+        return DATA_NOMEM;
+    memcpy(newentry, data, sizeof(HOST_t));
+
+    return macset_add_data(s, &newentry->mac, newentry);
 }
 
 /**

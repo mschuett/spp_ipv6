@@ -10,6 +10,7 @@
  *
  */
 
+#include "spp_ipv6_data_mac.h"
 #include "spp_ipv6_data_ip.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -137,13 +138,15 @@ void ipset_print_all(IP_set *s)
     }
 }
 
-
+/**
+ * alloc and create IPset.
+ */
 IP_set *ipset_create(int count)
 {
     IP_set *s;
     if (!count) // set default
         count = 20;
-    s = sfghash_new(count, sizeof(IP_t), 0, NULL);
+    s = sfghash_new(count, sizeof(IP_t), 0, ipset_dad_userfree);
     return s;
 }
 
@@ -153,6 +156,15 @@ IP_set *ipset_create(int count)
 void ipset_delete(IP_set *s)
 {
     sfghash_delete(s);
+}
+
+/**
+ * Free IPset entries, here either HASHMARKs or MAC_sets.
+ */
+void ipset_dad_userfree(void *p)
+{
+    if (p && p != HASHMARK)
+        macset_delete(p);
 }
 
 /**

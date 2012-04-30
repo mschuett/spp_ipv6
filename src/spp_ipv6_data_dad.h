@@ -30,7 +30,7 @@ typedef IP_set DAD_set;
  */
 static inline DAD_set *dad_create(int count)
 {
-    // do not change the data structure, i.e. no userfree() etc.
+    // do not change the data structure
     return ipset_create(count);
 }
 
@@ -39,23 +39,11 @@ static inline DAD_set *dad_create(int count)
  */
 static inline void dad_delete(DAD_set *s)
 {
-    MAC_set *ms;
-    SFGHASH_NODE *n;
-
-    n = sfghash_findfirst(s);
-    while (n) {
-        ms = n->data;
-        if (ms) {
-            macset_delete(ms);
-        }
-        n = sfghash_findnext(s);
-    }
-    
     ipset_delete(s);
 }
 
 /**
- * add HOST_t to DAD state
+ * allocate memory and add HOST_t to DAD state
  */
 static inline DATAOP_RET dad_add(DAD_set *s, const HOST_t *h)
 {
@@ -84,21 +72,17 @@ static inline DATAOP_RET dad_add(DAD_set *s, const HOST_t *h)
     
     if (new_macset && rc != DATA_OK) {
         // in case of error: clean up
-        macset_delete(p);
         ipset_remove(s, &h->ip);
     }
     return rc;
 }
 
 /**
- * add host to DAD state
+ * allocates new HOST_t and adds it to DAD state
  */
 static inline DATAOP_RET dad_add_by_ipmac(DAD_set *s, const IP_t *i, const MAC_t *m, time_t ts)
 {
-    HOST_t pivot;
-    host_set(&pivot, m, i, ts);
-    
-    return dad_add(s, &pivot);
+    return dad_add(s, host_set(NULL, m, i, ts));
 }
 
 
@@ -117,10 +101,8 @@ static inline DATAOP_RET dad_remove(DAD_set *s, const HOST_t *h)
     
     // now *p is our 2nd level MAC_set
     rc = macset_remove(p, &h->mac);
-    if (macset_empty(p)) {
+    if (macset_empty(p))
         ipset_remove(s, &h->ip);
-        macset_delete(p);
-    }
     return rc;
 }
 
@@ -182,7 +164,7 @@ static inline void dad_print_all(DAD_set *s)
         o = sfghash_findfirst(ms);
         while (o) {
             HOST_t *host = o->data;
-            _dpd.logMsg("%s\n", host_str(host));
+            _dpd.logMsg("%s @ %p\n", host_str(host), host);
             // assert(!host->type.router.prefix && host->type.dad.contacted == MAGICMARKER);
             o = sfghash_findnext(ms);
         }

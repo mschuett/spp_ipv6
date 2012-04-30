@@ -51,6 +51,7 @@ char      *mac_str(const MAC_t *m);
 MAC_t     *mac_set(MAC_t *m, const u_int8_t ether_source[]);
 MAC_set   *macset_create(int count);
 void       macset_delete(MAC_set *s);
+void       macset_dad_userfree(void *p);
 DATAOP_RET macset_add(MAC_set *s, const MAC_t *m);
 DATAOP_RET macset_addstring(MAC_set *s, const char *mac);
 DATAOP_RET macset_add_host(MAC_set *s, const void *h);
