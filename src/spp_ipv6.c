@@ -289,9 +289,9 @@ inline static void IPv6_UpdateStats(const SFSnortPacket *p, struct IPv6_Statisti
 inline static void IPv6_Process_Extensions(const SFSnortPacket *p, struct IPv6_State *context __attribute__((unused)))
 {
     uint_fast8_t i;
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
-            "IPv6_Process_Extensions() ext num = %d\n",
-            p->num_ip6_extensions););
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
+        "IPv6_Process_Extensions() ext num = %d\n",
+        p->num_ip6_extensions););
     for(i = 0; i < p->num_ip6_extensions; i++) {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
             "IPv6_Process_Extensions() ext type = %d\n",
@@ -451,6 +451,10 @@ static void IPv6_Process_ICMPv6(const SFSnortPacket *p, struct IPv6_State *conte
         return;
     }
 
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
+        "IPv6_Process_ICMPv6() icmpv6 type %d\n",
+        p->icmp_header->type););
+            
     /* check if ongoing DAD */
     ip_entry = dad_get(context->unconfirmed, host_set(NULL, mac_from_pkt(p), &(p->ip6h->ip_dst), 0));
     if (ip_entry) {
@@ -493,10 +497,10 @@ static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *co
     struct ICMPv6_RA *radv;
     struct nd_opt_hdr *option;
     struct nd_opt_prefix_info *prefix_info;
-    sfip_t *prefix;
+    IP_t prefix;
     uint_fast16_t len = p->ip_payload_size;
     DATAOP_RET addrc;
-    SFIP_RET sfip_rc;
+    SFIP_RET sfrc;
 
     radv   = (struct ICMPv6_RA*) p->ip_payload;
     option = (struct nd_opt_hdr *) (radv + 1);
@@ -507,16 +511,17 @@ static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *co
         switch (option->nd_opt_type) {
         case ND_OPT_PREFIX_INFORMATION:
             prefix_info = (struct nd_opt_prefix_info *) option;
-            prefix = sfip_alloc_raw(&prefix_info->nd_opt_pi_prefix, AF_INET6, &sfip_rc);
-            if (sfip_rc != SFIP_SUCCESS) {
-                _dpd.errMsg("sfip_alloc_raw() failed\n");
+            sfrc = sfip_set_raw(&prefix, &prefix_info->nd_opt_pi_prefix, AF_INET6);
+            if (sfrc != SFIP_SUCCESS) {
+                _dpd.errMsg("sfip_set_raw() failed\n");
                 return;
             }
-            sfip_set_bits(prefix, prefix_info->nd_opt_pi_prefix_len);
+            
+            sfip_set_bits(&prefix, prefix_info->nd_opt_pi_prefix_len);
             if (context->config->report_prefix_change
-                    && !ipset_contains(context->config->prefix_whitelist, ip_from_sfip(prefix))) {
+                    && !ipset_contains(context->config->prefix_whitelist, &prefix)) {
                 DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "IP prefix %s not in "
-                    "configured list\n", ip_str(ip_from_sfip(prefix))););
+                    "configured list\n", ip_str(&prefix)););
                 ALERT(SID_ICMP6_RA_UNKNOWN_PREFIX);
             }
 
@@ -530,7 +535,7 @@ static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *co
     // add state
     HOST_t *entry;
     entry = host_set(NULL, mac_from_pkt(p), ip_from_sfip(&p->ip6h->ip_src), ts_from_pkt(p));
-    host_setrouterdata(entry, radv->flags.all, radv->nd_ra_lifetime, prefix);
+    host_setrouterdata(entry, radv->flags.all, radv->nd_ra_lifetime, &prefix);
     
     addrc = hostset_add(context->routers, entry);
     if (addrc == DATA_ADDED) {
@@ -564,13 +569,13 @@ static void IPv6_Process_ICMPv6_NA(const SFSnortPacket *p, struct IPv6_State *co
     IP_t target_ip;
     HOST_t *pivot, *dad_entry;
     
-    pivot = host_set(NULL, mac_from_pkt(p), &target_ip, ts_from_pkt(p));
     sfrc = sfip_set_raw(&target_ip, &na->nd_na_target, AF_INET6);
     if (sfrc != SFIP_SUCCESS) {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "sfip_set failed in %s:%d\n", __FILE__, __LINE__););
         return;
     };
 
+    pivot = host_set(NULL, mac_from_pkt(p), &target_ip, ts_from_pkt(p));
     if (hostset_contains(context->hosts, pivot, ts_from_pkt(p))
         || hostset_contains(context->routers, pivot, ts_from_pkt(p))
         ) {
@@ -586,9 +591,9 @@ static void IPv6_Process_ICMPv6_NA(const SFSnortPacket *p, struct IPv6_State *co
     if (!dad_entry) {
         /* IP is yet unknown --> put into DAD state */
         DATAOP_RET addrc;
-        addrc = dad_add_by_ipmac(context->unconfirmed, &target_ip, mac_from_pkt(p), ts_from_pkt(p));
+        addrc = dad_add(context->unconfirmed, pivot);
         if (addrc != DATA_ADDED) {
-            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "dad_add_by_ipmac failed\n"););
+            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "dad_add failed\n"););
             return;
         }
         /* no DAD info, so simply trust NA
