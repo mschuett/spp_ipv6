@@ -16,6 +16,7 @@
 #include "spp_ipv6_data_mac.h"
 #include "spp_ipv6_data_ip.h"
 #include "spp_ipv6_data_host.h"
+#include "spp_ipv6_data_dad.h"
 
 /* get size of struct member */
 #define member_size(type, member) sizeof(((type *)0)->member)
@@ -76,7 +77,7 @@ struct IPv6_Config {
 struct IPv6_State {
     HOST_set *routers;   // known routers
     HOST_set *hosts;     // established hosts
-    HOST_set *unconfirmed;  // ongoing duplicate detections/solicitations
+    DAD_set *unconfirmed;  // ongoing duplicate detections/solicitations
     struct IPv6_Statistics *stat;
     struct IPv6_Config     *config;
 } __attribute__((packed));
