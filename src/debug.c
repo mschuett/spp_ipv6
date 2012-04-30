@@ -94,14 +94,11 @@ void DebugMessageFunc(uint64_t level, char *fmt, ...)
 void DebugWideMessageFunc(uint64_t level, wchar_t *fmt, ...)
 {
     va_list ap;
-    wchar_t buf[STD_BUF+1];
-
 
     if (!(level & GetDebugLevel()))
     {
         return;
     }
-    buf[STD_BUF]= (wchar_t)0;
 
     /* filename and line number information */
     if (DebugMessageFile != NULL)
