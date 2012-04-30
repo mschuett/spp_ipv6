@@ -66,13 +66,14 @@ MAC_t *mac_parse(MAC_t *m, const char* string)
  * Transform int array to MAC_t
  * no input checking, arguments have to be valid
  * 
- * MAC_t parameter is optional, if NULL then the static buffer is used.
+ * MAC_t parameter is optional
  */
 MAC_t *mac_set(MAC_t *m, const u_int8_t ether_source[])
 {
-    static MAC_t node;
     if (!m)
-        m = &node;
+        // no copying necessary
+        return (MAC_t *) &ether_source[0];
+    
     m->mac[0] = ether_source[0];
     m->mac[1] = ether_source[1];
     m->mac[2] = ether_source[2];
