@@ -580,9 +580,8 @@ static void IPv6_Process_ICMPv6_NA(const SFSnortPacket *p, struct IPv6_State *co
         || hostset_contains(context->routers, pivot, ts_from_pkt(p))
         ) {
         // legitimate host
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NA from known host %s/%s\n",
-                        mac_str(mac_from_pkt(p)),
-                        ip_str(&target_ip)););
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NA from known host %s\n",
+                        host_str(pivot)););
         return;
     }
     // otherwise: new host --> check status
@@ -612,8 +611,7 @@ static void IPv6_Process_ICMPv6_NA(const SFSnortPacket *p, struct IPv6_State *co
         
         if (dad_entry->type.dad.contacted) {
             /* host also was contacted by someone -- so it correctly entered the network */
-            hostset_add(context->hosts, dad_entry);
-            dad_remove(context->unconfirmed, dad_entry);
+            confirm_host(context, dad_entry);
         }
         /* else DAD exists, but still unconfirmed, so do nothing
          *  (could be result of NA flood/spoof) */
@@ -625,15 +623,13 @@ static void IPv6_Process_ICMPv6_NA(const SFSnortPacket *p, struct IPv6_State *co
             || macset_contains(context->config->host_whitelist, mac_set(NULL, p->ether_header->ether_source))
             || macset_contains(context->config->router_whitelist, mac_set(NULL, p->ether_header->ether_source))) {
             // looks legitimate
-            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "DAD collision with host %s / %s\n",
-                          mac_str(mac_from_pkt(p)),
-                          ip_str(&target_ip)););
+            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "DAD collision with host %s\n",
+                          host_str(pivot)););
             ALERT(SID_ICMP6_DAD_COLLISION);
         } else {
             // never seen the 2nd host before --> probably an attack
-            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "DAD DoS from (prob. fake MAC) %s / %s\n",
-                          mac_str(mac_from_pkt(p)),
-                          ip_str(&target_ip)););
+            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "DAD DoS from (prob. fake MAC) %s\n",
+                          host_str(pivot)););
             ALERT(SID_ICMP6_DAD_DOS);
         }
     }
@@ -790,3 +786,30 @@ static void IPv6_Parse(char *args, struct IPv6_Config *config)
     }
 }
 
+/**
+ * Move a HOST_t out of the DAD and into the 'confirmed hosts' state,
+ * and check MAC whitelist.
+ */
+static void confirm_host(struct IPv6_State *context, const HOST_t *newhost)
+{
+    DATAOP_RET rc;
+    
+    rc = hostset_add(context->hosts, newhost);
+
+    if (rc != DATA_ADDED) {
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "cannot add state for new IPv6 host: %s\n",
+                host_str(newhost)););
+        return;
+    }
+    
+    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "new IPv6 host: %s\n",
+            host_str(newhost)););
+    if (context->config->host_whitelist
+            && !macset_empty(context->config->host_whitelist)
+            && !macset_contains(context->config->host_whitelist, &newhost->mac)) {
+        ALERT(SID_ICMP6_INVALID_HOST_MAC);
+    } else {
+        ALERT(SID_ICMP6_ND_NEW_HOST);
+    }
+    dad_remove(context->unconfirmed, newhost);
+}

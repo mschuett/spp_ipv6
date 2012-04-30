@@ -44,4 +44,5 @@ static void IPv6_PrintStats(int);
 static void IPv6_ResetStats(int, void *);
 static void IPv6_Parse(char *, struct IPv6_Config *);
 
+static void confirm_host(struct IPv6_State *, const HOST_t *);
 #endif	/* _SPP_IPV6_H */
