@@ -77,7 +77,7 @@ void       hostset_delete(HOST_set *s);
 DATAOP_RET hostset_add(HOST_set *s, const HOST_t *h);
 HOST_t    *hostset_get(HOST_set *s, const HOST_t *h);
 HOST_t    *hostset_get_by_ipmac(HOST_set *s, const MAC_t *m, const IP_t *i);
-bool       hostset_contains(HOST_set *s, const HOST_t *h);
+bool       hostset_contains(HOST_set *s, const HOST_t *h, time_t update_ts);
 int        hostset_remove(HOST_set *s, const HOST_t *h);
 void       hostset_print_all(HOST_set *s);
 int        hostset_count(HOST_set *s);

@@ -249,6 +249,7 @@ void testHostset_remove() {
 void testHostset_contains() {
     HOST_set *s;
     DATAOP_RET rc;
+    HOST_t *p = NULL;
     
     s = hostset_create(5,0,0);
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
@@ -258,10 +259,22 @@ void testHostset_contains() {
     rc = hostset_add(s, &c);
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     
-    CU_ASSERT_TRUE(hostset_contains(s, &a));
-    CU_ASSERT_TRUE(hostset_contains(s, &b));
-    CU_ASSERT_TRUE(hostset_contains(s, &c));
-    CU_ASSERT_FALSE(hostset_contains(s, &d));
+    CU_ASSERT_TRUE(hostset_contains(s, &a, 0));
+    CU_ASSERT_TRUE(hostset_contains(s, &b, 0));
+    CU_ASSERT_TRUE(hostset_contains(s, &c, 0));
+    CU_ASSERT_FALSE(hostset_contains(s, &d, 0));
+
+    CU_ASSERT_PTR_NULL(p);
+    p = hostset_get(s, &b);
+    CU_ASSERT_PTR_NOT_NULL(p);
+    CU_ASSERT_EQUAL(p->last_adv_ts, 0);
+
+    CU_ASSERT_TRUE(hostset_contains(s, &a, 1234567890));
+    CU_ASSERT_TRUE(hostset_contains(s, &b, 1234567890));
+    CU_ASSERT_TRUE(hostset_contains(s, &c, 1234567890));
+    CU_ASSERT_FALSE(hostset_contains(s, &d, 1234567890));
+    
+    CU_ASSERT_TRUE(hostset_contains(s, &b, 1234567890));
 
     hostset_delete(s);
 }

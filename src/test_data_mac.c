@@ -303,8 +303,8 @@ int test_host()
     host_set(i, mac_parse(NULL, macdata[j]), ip_parse(NULL, ipdata[j]), time(NULL));
     assert(host_eq(h, i));
     printf("hostset_contains\n");
-    assert(hostset_contains(s, h));
-    assert(hostset_contains(s, i));
+    assert(hostset_contains(s, h, 0));
+    assert(hostset_contains(s, i, 0));
     printf("hostset_get\n");
     assert(host_eq(hostset_get(s, i), h));
     assert(host_eq(hostset_get(s, h), i));
@@ -313,11 +313,11 @@ int test_host()
     i = hostset_get(s, h);
     host_set(i, mac_parse(NULL, macdata[j+1]), ip_parse(NULL, ipdata[j]), time(NULL));
     assert(!host_eq(h, i));
-    assert(!hostset_contains(s, i));
+    assert(!hostset_contains(s, i, 0));
     assert(NULL == hostset_get(s, i));
     host_set(i, mac_parse(NULL, macdata[j]), ip_parse(NULL, ipdata[j+1]), time(NULL));
     assert(!host_eq(h, i));
-    assert(!hostset_contains(s, i));
+    assert(!hostset_contains(s, i, 0));
     assert(NULL == hostset_get(s, i));
 
     show_mem_addrs(s);

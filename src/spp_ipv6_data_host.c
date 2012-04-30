@@ -184,10 +184,19 @@ HOST_t *hostset_get_by_ipmac(HOST_set *s, const MAC_t *m, const IP_t *i)
 /**
  * check if set contains HOST,
  * just to provide same API as other data structs
+ * 
+ * if update_ts != 0 then update host's last_adv_ts
  */
-bool hostset_contains(HOST_set *s, const HOST_t *h)
+bool hostset_contains(HOST_set *s, const HOST_t *h, time_t update_ts)
 {
-    return (NULL != hostset_get(s, h));
+    HOST_t *node;
+    
+    node = hostset_get(s, h);
+    if (!node)
+        return false;
+    if (update_ts)
+        node->last_adv_ts = update_ts;
+    return true;
 }
 
 /**

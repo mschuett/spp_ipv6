@@ -562,16 +562,27 @@ static void IPv6_Process_ICMPv6_NA(const SFSnortPacket *p, struct IPv6_State *co
     struct nd_neighbor_advert *na = (struct nd_neighbor_advert *) p->ip_payload;
     SFIP_RET sfrc;
     IP_t target_ip;
-    HOST_t *dad_entry;
+    HOST_t *pivot, *dad_entry;
     
+    pivot = host_set(NULL, mac_from_pkt(p), &target_ip, ts_from_pkt(p));
     sfrc = sfip_set_raw(&target_ip, &na->nd_na_target, AF_INET6);
     if (sfrc != SFIP_SUCCESS) {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "sfip_set failed in %s:%d\n", __FILE__, __LINE__););
         return;
     };
 
-    
-    dad_entry = dad_get(context->unconfirmed, host_set(NULL, mac_from_pkt(p), &target_ip, 0));
+    if (hostset_contains(context->hosts, pivot, ts_from_pkt(p))
+        || hostset_contains(context->routers, pivot, ts_from_pkt(p))
+        ) {
+        // legitimate host
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NA from known host %s/%s\n",
+                        mac_str(mac_from_pkt(p)),
+                        ip_str(&target_ip)););
+        return;
+    }
+    // otherwise: new host --> check status
+
+    dad_entry = dad_get(context->unconfirmed, pivot);
     if (!dad_entry) {
         /* IP is yet unknown --> put into DAD state */
         DATAOP_RET addrc;
@@ -604,8 +615,8 @@ static void IPv6_Process_ICMPv6_NA(const SFSnortPacket *p, struct IPv6_State *co
     } else {
         /* MAC does not match -- collision
          * --> check if NA from known Host/Router/MAC whitelist (legitimate) or not (suspicious) */
-        if (hostset_contains(context->hosts, host_set(NULL, mac_from_pkt(p), &target_ip, 0))
-            || hostset_contains(context->routers, host_set(NULL, mac_from_pkt(p), &target_ip, 0))
+        if (hostset_contains(context->hosts, pivot, 0)
+            || hostset_contains(context->routers, pivot, 0)
             || macset_contains(context->config->host_whitelist, mac_set(NULL, p->ether_header->ether_source))
             || macset_contains(context->config->router_whitelist, mac_set(NULL, p->ether_header->ether_source))) {
             // looks legitimate
@@ -631,12 +642,12 @@ static void IPv6_Process_ICMPv6_NS(const SFSnortPacket *p, struct IPv6_State *co
     struct nd_neighbor_solicit *ns = (struct nd_neighbor_solicit *) p->ip_payload;
     SFIP_RET rc;
     DATAOP_RET addrc;
-    sfip_t *target_ip;
+    IP_t target_ip;
     HOST_t *ip_entry;
 
-    target_ip = sfip_alloc_raw(&ns->nd_ns_target, AF_INET6, &rc);
+    rc = sfip_set_raw(&target_ip, &ns->nd_ns_target, AF_INET6);
     if (rc != SFIP_SUCCESS) {
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "sfip_alloc_raw failed in %s:%d\n", __FILE__, __LINE__););
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "sfip_set failed in %s:%d\n", __FILE__, __LINE__););
         return;
     };
 
@@ -654,14 +665,15 @@ static void IPv6_Process_ICMPv6_NS(const SFSnortPacket *p, struct IPv6_State *co
      * --> i.e. new node tries to get address
      * --> check if already known
      */
-    ip_entry = hostset_get_by_ipmac(context->hosts, mac_from_pkt(p), target_ip);
+    ip_entry = hostset_get_by_ipmac(context->hosts, mac_from_pkt(p), &target_ip);
     if (ip_entry) {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Neighbour solicitation from known host\n"););
         return;
     }
 
     /* this is the expected part: the IP is yet unknown --> put into DAD state */
-    addrc = dad_add_by_ipmac(context->unconfirmed, target_ip, mac_from_pkt(p), ts_from_pkt(p));
+    ip_entry = host_set(NULL, mac_from_pkt(p), &target_ip, ts_from_pkt(p));
+    addrc = dad_add(context->unconfirmed, ip_entry);
     if (addrc != DATA_ADDED) {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "DAD hostset_add failed\n"););
         return;
