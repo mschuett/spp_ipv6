@@ -165,7 +165,7 @@ static void IPv6_Init(char *args)
     }
 
     // allocate everything, try to guess sensible default data struct sizes
-    prefixwl = macset_create( 5);
+    prefixwl = ipset_create( 5);
     routerwl = macset_create( 8);
     hostwl   = macset_create(32);
     stat     = (struct IPv6_Statistics *) calloc(1, sizeof (struct IPv6_Statistics));
@@ -497,10 +497,11 @@ static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *co
     struct ICMPv6_RA *radv;
     struct nd_opt_hdr *option;
     struct nd_opt_prefix_info *prefix_info;
-    IP_t prefix;
+    IP_t prefix = {0};
     uint_fast16_t len = p->ip_payload_size;
     DATAOP_RET addrc;
     SFIP_RET sfrc;
+    HOST_t *pivot, *entry;
 
     radv   = (struct ICMPv6_RA*) p->ip_payload;
     option = (struct nd_opt_hdr *) (radv + 1);
@@ -510,6 +511,7 @@ static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *co
         // check some known options
         switch (option->nd_opt_type) {
         case ND_OPT_PREFIX_INFORMATION:
+            // TODO: could there be two prefixes in a RA msg?
             prefix_info = (struct nd_opt_prefix_info *) option;
             sfrc = sfip_set_raw(&prefix, &prefix_info->nd_opt_pi_prefix, AF_INET6);
             if (sfrc != SFIP_SUCCESS) {
@@ -532,8 +534,44 @@ static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *co
         len -= 8 * (option->nd_opt_len);
         option = (struct nd_opt_hdr *) ((u_int8_t*) option + (8 * option->nd_opt_len));
     }
+    
+    if (!sfip_is_set(&prefix)) {
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "RA without prefix???\n"););
+        // TODO: add alert(?)
+        return;
+    }
+    
+    
+    // check for known router
+    pivot = host_set(NULL, mac_from_pkt(p), ip_from_sfip(&p->ip6h->ip_src), ts_from_pkt(p));
+    host_setrouterdata(pivot, radv->flags.all, radv->nd_ra_lifetime, &prefix);
+    entry = hostset_get(context->routers, pivot);
+    if (entry) {
+        // known router, only check for changes
+        if (!ip_eq(pivot->type.router.prefix, &prefix)) {
+            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
+                "announced router prefix changed from %s to %s\n",
+                ip_str(pivot->type.router.prefix), ip_str(&prefix)););
+            ALERT(SID_ICMP6_RA_PREFIX_CHANGED);
+            // update state
+            ip_cpy(pivot->type.router.prefix, &prefix);
+        }
+
+        if ((pivot->type.router.flags.all != entry->type.router.flags.all)
+            || (pivot->type.router.lifetime != entry->type.router.lifetime)) {
+            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
+                "announced router flags changed from 0x%x/lifetime %d to 0x%x/lifetime %d\n",
+                pivot->type.router.flags.all, pivot->type.router.lifetime,
+                entry->type.router.flags.all, entry->type.router.lifetime););
+            ALERT(SID_ICMP6_RA_FLAGS_CHANGED);
+            // update state
+            entry->type.router.lifetime = pivot->type.router.lifetime;
+            entry->type.router.flags.all = pivot->type.router.flags.all;
+        }
+    }
+    
+    
     // add state
-    HOST_t *entry;
     entry = host_set(NULL, mac_from_pkt(p), ip_from_sfip(&p->ip6h->ip_src), ts_from_pkt(p));
     host_setrouterdata(entry, radv->flags.all, radv->nd_ra_lifetime, &prefix);
     
@@ -763,8 +801,12 @@ static void IPv6_Parse(char *args, struct IPv6_Config *config)
             while ((arg = strtok(NULL, ", \t\n\r")) && strchr(arg, '/')) {  // TODO remove /-check
                 prefix = ip_parse(NULL, arg);
                 if (prefix) {
-                    ipset_add(config->prefix_whitelist, prefix);
-                    _dpd.logMsg("  default net prefix %s\n", ip_str(prefix));
+                    DATAOP_RET rc;
+                    rc = ipset_add(config->prefix_whitelist, prefix);
+                    if (rc == DATA_ADDED)
+                        _dpd.logMsg("  default net prefix %s\n", ip_str(prefix));
+                    else
+                        _dpd.logMsg("  cannot store net prefix %s\n", ip_str(prefix));
                 } else {
                     _dpd.fatalMsg("  Invalid prefix %s\n", arg);
                 }
@@ -784,6 +826,8 @@ static void IPv6_Parse(char *args, struct IPv6_Config *config)
             _dpd.fatalMsg("IPv6: Invalid option %s\n", arg);
         }
     }
+    
+    ipv6_config_print(config);
 }
 
 /**
@@ -812,4 +856,18 @@ static void confirm_host(struct IPv6_State *context, const HOST_t *newhost)
         ALERT(SID_ICMP6_ND_NEW_HOST);
     }
     dad_remove(context->unconfirmed, newhost);
+}
+
+static void ipv6_config_print(struct IPv6_Config *config) {
+    _dpd.logMsg(" == Stored configuration == \n");
+    _dpd.logMsg("Routers/Hosts/DADs max: %d/%d/%d, mem: %d/%d/%d\n"
+            "Flags track_ndp = %d, report_prefix_change = %d,\n"
+            "report_new_routers = %d, report_new_hosts = %d\n",
+            config->max_routers, config->max_hosts, config->max_unconfirmed,
+            config->mem_routers, config->mem_hosts, config->mem_unconfirmed,
+            config->track_ndp, config->report_prefix_change,
+            config->report_new_routers, config->report_new_hosts);
+    macset_print_all(config->router_whitelist, "router_whitelist");
+    macset_print_all(config->host_whitelist, "host_whitelist");
+    ipset_print_all(config->prefix_whitelist, "prefix_whitelist");
 }
