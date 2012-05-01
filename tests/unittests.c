@@ -59,6 +59,7 @@ void testDAD_add_countlimit();
 void testDAD_add_memlimit();
 void testDAD_addall();
 void testDAD_add_by_ipmac();
+void testDAD_expire();
 void testDAD_remove();
 void testDAD_get();
 
@@ -175,6 +176,7 @@ int main() {
         (NULL == CU_add_test(pSuite, "testDAD_add_memlimit",   testDAD_add_memlimit))   ||
         (NULL == CU_add_test(pSuite, "testDAD_addall",       testDAD_addall))       ||
         (NULL == CU_add_test(pSuite, "testDAD_add_by_ipmac", testDAD_add_by_ipmac)) ||
+        (NULL == CU_add_test(pSuite, "testDAD_expire",       testDAD_expire))       ||
         (NULL == CU_add_test(pSuite, "testDAD_get",          testDAD_get)) ) {
         CU_cleanup_registry();
         return CU_get_error();

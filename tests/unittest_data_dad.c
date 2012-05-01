@@ -34,14 +34,15 @@ int testDAD_init_suite() {
     char *ipstr = "5338:41ab:64f7:a598:39b6:e0f8:5a6e:5ec8";
     IP_t ip;
     int i;
+    time_t ts = 1234567890;
     
     ip_parse(&ip, ipstr);
 
     for (i = 0; i < EXAMPLE_LEN; i++) {
-        host_set(&h[i], mac_parse(NULL, macdata[i]), ip_parse(NULL, ipdata[i]), 0);
+        host_set(&h[i], mac_parse(NULL, macdata[i]), ip_parse(NULL, ipdata[i]), ts++);
     }
     for (i = 0; i < EXAMPLE_LEN; i++) {
-        host_set(&g[i], mac_parse(NULL, macdata[i]), &ip, 0);
+        host_set(&g[i], mac_parse(NULL, macdata[i]), &ip, ts++);
     }
     return 0;
 }
@@ -169,6 +170,28 @@ void testDAD_addall() {
     CU_ASSERT_EQUAL(20, dad_count(s));
 
     //dad_print_all(s);
+    dad_delete(s);
+}
+
+void testDAD_expire() {
+    DAD_set *s;
+    int i;
+    
+    s = dad_create(20, 20, 0);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
+    CU_ASSERT_EQUAL(0, dad_count(s));
+    
+    for (i = 0; i < EXAMPLE_LEN; i++) {
+        dad_add(s, &h[i]);
+        dad_add(s, &g[i]);
+    }
+    CU_ASSERT_EQUAL(20, dad_count(s));
+    CU_ASSERT_EQUAL(20, s->count);
+    CU_ASSERT_EQUAL(20, s->maxcount);
+    
+    dad_print_all(s);
+    dad_expire(s);
+    dad_print_all(s);
     dad_delete(s);
 }
 
