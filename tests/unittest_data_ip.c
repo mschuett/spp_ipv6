@@ -256,6 +256,8 @@ void testIpset_add() {
     rc = ipset_add(s, &f);
     CU_ASSERT_EQUAL(5, ipset_count(s));
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
+    
+    //ipset_print_all(s, "Test set");
     ipset_delete(s);
 }
 

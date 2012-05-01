@@ -58,7 +58,7 @@ char *host_str(const HOST_t *host)
 }
 
 /**
- * Aux. function to print all hosts in set to stdout.
+ * Aux. function to print all hosts in set.
  */
 void hostset_print_all(HOST_set *s)
 {
@@ -159,6 +159,7 @@ DATAOP_RET hostset_add(HOST_set *s, const HOST_t *h)
     if (!h)
         return DATA_ERROR;
 
+    assert(sfip_bits((IP_t *) &h->ip) == 128);
     return sfxhash_add(s, (HOST_t *) h, (HOST_t *) h);
 }
 

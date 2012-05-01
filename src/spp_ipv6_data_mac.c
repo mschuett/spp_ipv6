@@ -17,6 +17,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "sf_dynamic_preprocessor.h"
+extern DynamicPreprocessorData _dpd;
+
 /**
  * Compare MAC addesses for equality.
  */
@@ -204,6 +207,22 @@ bool macset_empty(MAC_set *s)
 int macset_count(MAC_set *s)
 {
     return sfghash_count(s);
+}
+
+/**
+ * print all MACs in set.
+ */
+void macset_print_all(MAC_set *s, const char *title) {
+    MAC_t *mac;
+    SFGHASH_NODE *n;
+   
+    _dpd.logMsg("MAC set '%s' with %d entries:\n", title, macset_count(s));
+    n = sfghash_findfirst(s);
+    while (n) {
+        mac = n->key;
+        _dpd.logMsg("%s\n", mac_str(mac));
+        n = sfghash_findnext(s);
+    }
 }
 
 /**

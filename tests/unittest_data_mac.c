@@ -297,6 +297,7 @@ void testMacset_addstring() {
         rc = macset_addstring(s, macdata[j]);
         CU_ASSERT_EQUAL(rc, DATA_ADDED);
     }
+    //macset_print_all(s, "Test set");
     macset_delete(s);
 }
 

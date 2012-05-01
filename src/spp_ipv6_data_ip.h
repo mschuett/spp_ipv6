@@ -39,7 +39,7 @@ IP_t      *ip_dup(const IP_t *src);
 IP_t      *ip_parse(IP_t *dst, const char* string);
 IP_t      *ip_set(IP_t *dst, const sfip_t *src);
 char      *ip_str(const IP_t *m);
-void       ipset_print_all(IP_set *s);
+void       ipset_print_all(IP_set *s, const char *title);
 IP_set    *ipset_create(int count);
 void       ipset_delete(IP_set *s);
 void       ipset_dad_userfree(void *p);
@@ -51,5 +51,4 @@ void      *ipset_get(IP_set *s, const IP_t *m);
 int        ipset_remove(IP_set *s, const IP_t *m);
 bool       ipset_empty(IP_set *s);
 int        ipset_count(IP_set *s);
-
 #endif	/* SPP_IPV6_DATA_IP_H */

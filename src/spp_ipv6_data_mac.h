@@ -60,5 +60,6 @@ bool       macset_contains(MAC_set *s, const MAC_t *m);
 void      *macset_get(MAC_set *s, const MAC_t *m);
 bool       macset_empty(MAC_set *s);
 int        macset_count(MAC_set *s);
+void       macset_print_all(MAC_set *s, const char *title);
 
 #endif	/* SPP_IPV6_DATA_MAC_H */

@@ -16,6 +16,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "sf_dynamic_preprocessor.h"
+extern DynamicPreprocessorData _dpd;
+
 /**
  * Compare IP addesses for equality
  */
@@ -123,17 +126,18 @@ char *ip_str(const IP_t *m)
 }
 
 /**
- * Aux. function to print all IP addresses in set to stdout.
+ * Aux. function to print all IP addresses in set.
  */
-void ipset_print_all(IP_set *s)
+void ipset_print_all(IP_set *s, const char *title)
 {
-    IP_t *m;
+    IP_t *ip;
     SFGHASH_NODE *n;
 
+    _dpd.logMsg("IP set '%s' with %d entries:\n", title, ipset_count(s));
     n = sfghash_findfirst(s);
     while (n) {
-        m = n->key;
-        printf("'%s'\n", ip_str(m));
+        ip = n->key;
+        _dpd.logMsg("%s\n", ip_str(ip));
         n = sfghash_findnext(s);
     }
 }

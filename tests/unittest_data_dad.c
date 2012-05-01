@@ -83,7 +83,7 @@ void testDAD_add() {
     rc = dad_add(s, &h[0]);
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
     CU_ASSERT_EQUAL(1, dad_count(s));
-    dad_print_all(s);
+    //dad_print_all(s);
     
     rc = dad_add(s, &g[0]);
     CU_ASSERT_EQUAL(rc, DATA_ADDED);
