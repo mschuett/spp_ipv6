@@ -19,19 +19,46 @@
 #ifndef SPP_IPV6_DATA_DAD_H
 #define	SPP_IPV6_DATA_DAD_H
 
+#include <assert.h>
 #include "spp_ipv6_data_structs.h"
 
 #include "sf_dynamic_preprocessor.h"
 extern DynamicPreprocessorData _dpd;
 
-typedef IP_set DAD_set;
+typedef struct _DAD_set {
+    IP_set *ip;
+    int    count;
+    int    maxcount;
+    size_t mem;
+    size_t maxmem;
+} DAD_set;
+
+
+static inline int dad_count(DAD_set *s);
+
 /**
  * create DAD state
  */
-static inline DAD_set *dad_create(int count)
+static inline DAD_set *dad_create(int count, int maxcount, int memsize)
 {
-    // do not change the data structure
-    return ipset_create(count);
+    DAD_set *s;
+    IP_set  *i;
+    
+    s = malloc(sizeof(DAD_set));
+    if (!s)
+        return NULL;
+    i = ipset_create(count);
+    if (!i) {
+        free(s);
+        return NULL;
+    }
+    
+    s->ip       = i;
+    s->count    = 0;
+    s->mem      = 0;
+    s->maxcount = maxcount;
+    s->maxmem   = memsize;
+    return s;
 }
 
 /**
@@ -39,7 +66,8 @@ static inline DAD_set *dad_create(int count)
  */
 static inline void dad_delete(DAD_set *s)
 {
-    ipset_delete(s);
+    ipset_delete(s->ip);
+    free(s);
 }
 
 /**
@@ -51,14 +79,20 @@ static inline DATAOP_RET dad_add(DAD_set *s, const HOST_t *h)
     DATAOP_RET rc;
     MAC_set *p;
 
-    p = ipset_get(s, &h->ip);
+    assert(dad_count(s) == s->count);
+
+    if ((s->maxcount && (s->count >= s->maxcount))
+            || (s->maxmem && (s->mem >= s->maxmem)))
+        return DATA_NOMEM;
+            
+    p = ipset_get(s->ip, &h->ip);
     if (!p) {
         p = macset_create(0);
         if (!p)
             return DATA_ERROR;
         
         // also add the macset to the ipset
-        rc = ipset_add_data(s, &h->ip, p);
+        rc = ipset_add_data(s->ip, &h->ip, p);
         if (rc != DATA_OK) {
             macset_delete(p);
             return DATA_ERROR;
@@ -72,8 +106,16 @@ static inline DATAOP_RET dad_add(DAD_set *s, const HOST_t *h)
     
     if (new_macset && rc != DATA_OK) {
         // in case of error: clean up
-        ipset_remove(s, &h->ip);
+        ipset_remove(s->ip, &h->ip);
+        return rc;
     }
+
+    if (rc == DATA_OK) {
+        s->count++;
+        s->mem += sizeof(HOST_t) + (new_macset * sizeof(MAC_set));
+    }
+    
+    assert(dad_count(s) == s->count);
     return rc;
 }
 
@@ -94,15 +136,26 @@ static inline DATAOP_RET dad_remove(DAD_set *s, const HOST_t *h)
     DATAOP_RET rc;
     MAC_set *p;
 
-    p = ipset_get(s, &h->ip);
+    assert(dad_count(s) == s->count);
+
+    p = ipset_get(s->ip, &h->ip);
     if (!p) {
         return DATA_ERROR;
     }
     
     // now *p is our 2nd level MAC_set
     rc = macset_remove(p, &h->mac);
-    if (macset_empty(p))
-        ipset_remove(s, &h->ip);
+    if (rc == DATA_OK) {
+        s->count--;
+        s->mem -= sizeof(HOST_t);
+    }
+    if (macset_empty(p)) {
+        ipset_remove(s->ip, &h->ip);
+        s->mem -= sizeof(MAC_set);
+    }
+    
+    assert(dad_count(s) == s->count);
+
     return rc;
 }
 
@@ -115,14 +168,16 @@ static inline int dad_count(DAD_set *s)
     MAC_set *ms;
     SFGHASH_NODE *n;
 
-    n = sfghash_findfirst(s);
+    // the old way
+    n = sfghash_findfirst(s->ip);
     while (n) {
         ms = n->data;
         if (ms) {
             c += macset_count(ms);
         }
-        n = sfghash_findnext(s);
+        n = sfghash_findnext(s->ip);
     }
+    
     return c;
 }
 
@@ -134,7 +189,7 @@ static inline HOST_t *dad_get(DAD_set *s, const HOST_t *h)
     MAC_set *ms;
     HOST_t  *result;
 
-    ms = ipset_get(s, &h->ip);
+    ms = ipset_get(s->ip, &h->ip);
     if (!ms)
         return NULL;
     result = macset_get(ms, &h->mac);
@@ -158,7 +213,7 @@ static inline void dad_print_all(DAD_set *s)
     MAC_set *ms;
    
     _dpd.logMsg("DAD set with %d entries:\n", dad_count(s));
-    n = sfghash_findfirst(s);
+    n = sfghash_findfirst(s->ip);
     while (n) {
         ms = n->data;
         o = sfghash_findfirst(ms);
@@ -168,7 +223,7 @@ static inline void dad_print_all(DAD_set *s)
             // assert(!host->type.router.prefix && host->type.dad.contacted == MAGICMARKER);
             o = sfghash_findnext(ms);
         }
-        n = sfghash_findnext(s);
+        n = sfghash_findnext(s->ip);
     }
 }
 

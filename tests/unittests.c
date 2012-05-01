@@ -55,6 +55,8 @@ void testHostset_remove();
 int testDAD_init_suite();
 void testDAD_create();
 void testDAD_add();
+void testDAD_add_countlimit();
+void testDAD_add_memlimit();
 void testDAD_addall();
 void testDAD_add_by_ipmac();
 void testDAD_remove();
@@ -169,6 +171,8 @@ int main() {
     /* Add the tests to the suite */
     if ((NULL == CU_add_test(pSuite, "testDAD_create",       testDAD_create))       ||
         (NULL == CU_add_test(pSuite, "testDAD_add",          testDAD_add))          ||
+        (NULL == CU_add_test(pSuite, "testDAD_add_countlimit", testDAD_add_countlimit)) ||
+        (NULL == CU_add_test(pSuite, "testDAD_add_memlimit",   testDAD_add_memlimit))   ||
         (NULL == CU_add_test(pSuite, "testDAD_addall",       testDAD_addall))       ||
         (NULL == CU_add_test(pSuite, "testDAD_add_by_ipmac", testDAD_add_by_ipmac)) ||
         (NULL == CU_add_test(pSuite, "testDAD_get",          testDAD_get)) ) {

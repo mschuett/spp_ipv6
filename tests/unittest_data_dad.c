@@ -51,32 +51,32 @@ int testDAD_init_suite() {
  */
 
 void testDAD_create() {
-    IP_set *s;
+    DAD_set *s;
 
-    s = dad_create(0);
+    s = dad_create(0, 0, 0);
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
-    CU_ASSERT_EQUAL(0, ipset_count(s));
+    CU_ASSERT_EQUAL(0, ipset_count(s->ip));
     CU_ASSERT_EQUAL(0, dad_count(s));
     dad_delete(s);
 
-    s = dad_create(10);
+    s = dad_create(10, 0, 0);
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
-    CU_ASSERT_EQUAL(0, ipset_count(s));
+    CU_ASSERT_EQUAL(0, ipset_count(s->ip));
     CU_ASSERT_EQUAL(0, dad_count(s));
     dad_delete(s);
 
-    s = dad_create(10240);
+    s = dad_create(10240, 0, 0);
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
-    CU_ASSERT_EQUAL(0, ipset_count(s));
+    CU_ASSERT_EQUAL(0, ipset_count(s->ip));
     CU_ASSERT_EQUAL(0, dad_count(s));
     dad_delete(s);
 }
 
 void testDAD_add() {
-    IP_set *s;
+    DAD_set *s;
     DATAOP_RET rc;
     
-    s = dad_create(20);
+    s = dad_create(20, 0, 0);
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, dad_count(s));
     
@@ -92,12 +92,68 @@ void testDAD_add() {
     dad_delete(s);
 }
 
+void testDAD_add_countlimit() {
+    DAD_set *s;
+    DATAOP_RET rc;
+    
+    s = dad_create(20, 2, 0);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
+    CU_ASSERT_EQUAL(0, dad_count(s));
+    
+    rc = dad_add(s, &h[0]);
+    CU_ASSERT_EQUAL(rc, DATA_ADDED);
+    CU_ASSERT_EQUAL(1, dad_count(s));
+    //dad_print_all(s);
+    
+    rc = dad_add(s, &g[0]);
+    CU_ASSERT_EQUAL(rc, DATA_ADDED);
+    CU_ASSERT_EQUAL(2, dad_count(s));
+
+    rc = dad_add(s, &h[1]);
+    CU_ASSERT_EQUAL(rc, DATA_NOMEM);
+    CU_ASSERT_EQUAL(2, dad_count(s));
+
+    rc = dad_add(s, &g[1]);
+    CU_ASSERT_EQUAL(rc, DATA_NOMEM);
+    CU_ASSERT_EQUAL(2, dad_count(s));
+
+    dad_delete(s);
+}
+
+
+void testDAD_add_memlimit() {
+    DAD_set *s;
+    DATAOP_RET rc;
+    
+    s = dad_create(20, 0, 100);
+    CU_ASSERT_PTR_NOT_NULL_FATAL(s);
+    CU_ASSERT_EQUAL(0, dad_count(s));
+    
+    rc = dad_add(s, &h[0]);
+    CU_ASSERT_EQUAL(rc, DATA_ADDED);
+    CU_ASSERT_EQUAL(1, dad_count(s));
+    
+    rc = dad_add(s, &g[0]);
+    CU_ASSERT_EQUAL(rc, DATA_ADDED);
+    CU_ASSERT_EQUAL(2, dad_count(s));
+
+    rc = dad_add(s, &h[1]);
+    CU_ASSERT_EQUAL(rc, DATA_NOMEM);
+    CU_ASSERT_EQUAL(2, dad_count(s));
+
+    rc = dad_add(s, &g[1]);
+    CU_ASSERT_EQUAL(rc, DATA_NOMEM);
+    CU_ASSERT_EQUAL(2, dad_count(s));
+
+    dad_delete(s);
+}
+
 void testDAD_addall() {
-    IP_set *s;
+    DAD_set *s;
     DATAOP_RET rc;
     int i;
     
-    s = dad_create(20);
+    s = dad_create(20, 0, 0);
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, dad_count(s));
     
@@ -112,15 +168,16 @@ void testDAD_addall() {
     }
     CU_ASSERT_EQUAL(20, dad_count(s));
 
+    //dad_print_all(s);
     dad_delete(s);
 }
 
 void testDAD_add_by_ipmac() {
-    IP_set *s;
+    DAD_set *s;
     DATAOP_RET rc;
     int i;
     
-    s = dad_create(20);
+    s = dad_create(20, 0, 0);
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, dad_count(s));
     
@@ -135,11 +192,11 @@ void testDAD_add_by_ipmac() {
 }
 
 void testDAD_remove() {
-    IP_set *s;
+    DAD_set *s;
     DATAOP_RET rc;
     int i;
     
-    s = dad_create(20);
+    s = dad_create(20, 0, 0);
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     CU_ASSERT_EQUAL(0, dad_count(s));
     
@@ -172,12 +229,12 @@ void testDAD_remove() {
 
 
 void testDAD_get() {
-    IP_set *s;
+    DAD_set *s;
     DATAOP_RET rc;
     int i;
     HOST_t *ptr;
     
-    s = dad_create(20);
+    s = dad_create(20, 0, 0);
     CU_ASSERT_PTR_NOT_NULL_FATAL(s);
     for (i = 0; i < EXAMPLE_LEN; i++) {
         rc = dad_add(s, &h[i]);
