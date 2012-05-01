@@ -541,28 +541,27 @@ static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *co
         return;
     }
     
-    
     // check for known router
     pivot = host_set(NULL, mac_from_pkt(p), ip_from_sfip(&p->ip6h->ip_src), ts_from_pkt(p));
     host_setrouterdata(pivot, radv->flags.all, radv->nd_ra_lifetime, &prefix);
     entry = hostset_get(context->routers, pivot);
     if (entry) {
         // known router, only check for changes
-        if (!ip_eq(pivot->type.router.prefix, &prefix)) {
+        if (!ip_eq(entry->type.router.prefix, &prefix)) {
             DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
                 "announced router prefix changed from %s to %s\n",
-                ip_str(pivot->type.router.prefix), ip_str(&prefix)););
+                ip_str(entry->type.router.prefix), ip_str(&prefix)););
             ALERT(SID_ICMP6_RA_PREFIX_CHANGED);
             // update state
-            ip_cpy(pivot->type.router.prefix, &prefix);
+            ip_cpy(entry->type.router.prefix, &prefix);
         }
 
-        if ((pivot->type.router.flags.all != entry->type.router.flags.all)
-            || (pivot->type.router.lifetime != entry->type.router.lifetime)) {
+        if ((entry->type.router.flags.all != pivot->type.router.flags.all)
+            || (entry->type.router.lifetime != pivot->type.router.lifetime)) {
             DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
                 "announced router flags changed from 0x%x/lifetime %d to 0x%x/lifetime %d\n",
-                pivot->type.router.flags.all, pivot->type.router.lifetime,
-                entry->type.router.flags.all, entry->type.router.lifetime););
+                entry->type.router.flags.all, entry->type.router.lifetime,
+                pivot->type.router.flags.all, pivot->type.router.lifetime););
             ALERT(SID_ICMP6_RA_FLAGS_CHANGED);
             // update state
             entry->type.router.lifetime = pivot->type.router.lifetime;
@@ -577,7 +576,7 @@ static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *co
     
     addrc = hostset_add(context->routers, entry);
     if (addrc == DATA_ADDED) {
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "new IPv6 router advertised: %s\n",
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "new IPv6 router advertised:\n%s\n",
                       host_str(entry)););
 
         // different events, depending on existing whitelist
