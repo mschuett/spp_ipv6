@@ -24,7 +24,9 @@ extern DynamicPreprocessorData _dpd;
  */
 bool ip_eq(const IP_t *a, const IP_t *b)
 {
-    return (SFIP_EQUAL == sfip_compare((sfip_t *) a, (sfip_t *) b));
+    // sfip_compare ignores bits
+    return (sfip_bits((sfip_t *) a) == sfip_bits((sfip_t *) b)
+            && SFIP_EQUAL == sfip_compare((sfip_t *) a, (sfip_t *) b));
 }
 
 /**

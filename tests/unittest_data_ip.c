@@ -98,6 +98,18 @@ void testIp_eq() {
     CU_ASSERT_FALSE(ip_eq(&c, &a));
 }
 
+void testIp_prefixlen_eq_cmp() {
+    IP_t x, y;
+    ip_parse(&x, "2001:0db8:abcd::/64");
+    ip_parse(&y, "2001:0db8:abcd::/63");
+    
+    // this is important for prefix comparison:
+    CU_ASSERT_FALSE(ip_eq(&x, &y));
+
+    // not ideal, but this is the current behaviour, as inherited from sfip_compare:
+    CU_ASSERT(ip_cmp(&x, &y) == 0);
+}
+
 void testIp_cpy() {
     IP_t d;
     
