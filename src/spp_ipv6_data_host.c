@@ -156,11 +156,35 @@ void hostset_delete(HOST_set *s)
  */
 DATAOP_RET hostset_add(HOST_set *s, const HOST_t *h)
 {
+    DATAOP_RET rc;
+    HOST_t *newentry;
+    IP_t *newprefix;
+    
     if (!h)
         return DATA_ERROR;
 
     assert(sfip_bits((IP_t *) &h->ip) == 128);
-    return sfxhash_add(s, (HOST_t *) h, (HOST_t *) h);
+    /* important: the HOST_t is alloc'd by sfxhash_add,
+     * but we have to alloc and copy the prefix ourselves */
+    if (h->type.router.prefix) {
+        newprefix = malloc(sizeof(IP_t));
+        if (!newprefix)
+            return DATA_NOMEM;
+        ip_cpy(newprefix, h->type.router.prefix);
+    }
+        
+    rc = sfxhash_add(s, (HOST_t *) h, (HOST_t *) h);
+    
+    if (h->type.router.prefix) {
+        if (rc != DATA_ADDED) { // clean up
+            free(newprefix);
+        } else {  // fix prefix ptr
+            newentry = sfxhash_lru(s);
+            assert(host_eq(newentry, h));
+            newentry->type.router.prefix = newprefix;
+        }
+    }
+    return rc;
 }
 
 /**
