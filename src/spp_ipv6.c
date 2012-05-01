@@ -683,12 +683,6 @@ static void IPv6_Process_ICMPv6_NS(const SFSnortPacket *p, struct IPv6_State *co
     IP_t target_ip;
     HOST_t *ip_entry;
 
-    rc = sfip_set_raw(&target_ip, &ns->nd_ns_target, AF_INET6);
-    if (rc != SFIP_SUCCESS) {
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "sfip_set failed in %s:%d\n", __FILE__, __LINE__););
-        return;
-    };
-
     // sfip_compare() is confusing, roll my own test for "::"
     if (p->ip6h->ip_src.ip.u6_addr32[0]
      || p->ip6h->ip_src.ip.u6_addr32[1]
@@ -697,6 +691,12 @@ static void IPv6_Process_ICMPv6_NS(const SFSnortPacket *p, struct IPv6_State *co
         /* src address set --> LLA resolution or reachability check */
         return;
     }
+
+    rc = sfip_set_raw(&target_ip, &ns->nd_ns_target, AF_INET6);
+    if (rc != SFIP_SUCCESS) {
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "sfip_set failed in %s:%d\n", __FILE__, __LINE__););
+        return;
+    };
 
     /* else:
      * unspecified address
