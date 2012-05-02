@@ -167,9 +167,6 @@ DATAOP_RET macset_add_host(MAC_set *s, const void *data)
         return DATA_ERROR;
 
     newentry = malloc(sizeof(HOST_t));
-    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
-            "macset_add_host: alloc HOST_t (%d bytes) @ %p\n",
-            sizeof(HOST_t), newentry););
     if (!newentry)
         return DATA_NOMEM;
     memcpy(newentry, data, sizeof(HOST_t));
