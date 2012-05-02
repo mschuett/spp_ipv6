@@ -72,7 +72,7 @@ char      *host_str(const HOST_t *h);
 HOST_t    *host_set(HOST_t *h, const MAC_t *m, const IP_t *i, time_t t);
 void       host_setrouterdata(HOST_t *h, u_int8_t ra_flags, u_int16_t ra_lifetime, sfip_t* prefix);
 void       host_free(HOST_t *h);
-HOST_set  *hostset_create(int count, int maxcount, int memsize);
+HOST_set  *hostset_create(unsigned count, unsigned maxcount, unsigned memsize);
 void       hostset_delete(HOST_set *s);
 DATAOP_RET hostset_add(HOST_set *s, const HOST_t *h);
 HOST_t    *hostset_get(HOST_set *s, const HOST_t *h);
@@ -80,7 +80,7 @@ HOST_t    *hostset_get_by_ipmac(HOST_set *s, const MAC_t *m, const IP_t *i);
 bool       hostset_contains(HOST_set *s, const HOST_t *h, time_t update_ts);
 int        hostset_remove(HOST_set *s, const HOST_t *h);
 void       hostset_print_all(HOST_set *s);
-int        hostset_count(HOST_set *s);
+unsigned   hostset_count(HOST_set *s);
 bool       hostset_empty(HOST_set *s);
 int        hostset_userfree(void *key, void *data);
 

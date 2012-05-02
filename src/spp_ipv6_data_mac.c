@@ -103,7 +103,7 @@ char *mac_str(const MAC_t *m)
 /**
  * allocate and create new MAC set
  */
-MAC_set *macset_create(int count)
+MAC_set *macset_create(unsigned count)
 {
     MAC_set *s;
     if (!count) // set default
@@ -204,7 +204,7 @@ bool macset_empty(MAC_set *s)
 /**
  * count set entries
  */
-int macset_count(MAC_set *s)
+unsigned macset_count(MAC_set *s)
 {
     return sfghash_count(s);
 }

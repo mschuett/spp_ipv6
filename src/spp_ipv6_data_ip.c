@@ -147,7 +147,7 @@ void ipset_print_all(IP_set *s, const char *title)
 /**
  * alloc and create IPset.
  */
-IP_set *ipset_create(int count)
+IP_set *ipset_create(unsigned count)
 {
     IP_set *s;
     if (!count) // set default
@@ -228,7 +228,7 @@ bool ipset_empty(IP_set *s)
     return (ipset_count(s) == 0);
 }
 
-int ipset_count(IP_set *s)
+unsigned ipset_count(IP_set *s)
 {
     return sfghash_count(s);
 }

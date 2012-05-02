@@ -125,7 +125,7 @@ void host_free(HOST_t *h)
 /**
  * Create a hostset
  */
-HOST_set *hostset_create(int count, int maxcount, int memsize)
+HOST_set *hostset_create(unsigned count, unsigned maxcount, unsigned memsize)
 {
     HOST_set *s;
     if (!count) // set default
@@ -236,7 +236,7 @@ int hostset_remove(HOST_set *s, const HOST_t *h)
 /**
  * number of entries in hostset
  */
-int hostset_count(HOST_set *s)
+unsigned hostset_count(HOST_set *s)
 {
     return sfxhash_count(s);
 }

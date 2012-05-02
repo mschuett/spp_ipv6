@@ -49,7 +49,7 @@ void       mac_cpy(MAC_t *dst, const MAC_t *src);
 MAC_t     *mac_parse(MAC_t *m, const char* string);
 char      *mac_str(const MAC_t *m);
 MAC_t     *mac_set(MAC_t *m, const u_int8_t ether_source[]);
-MAC_set   *macset_create(int count);
+MAC_set   *macset_create(unsigned count);
 void       macset_delete(MAC_set *s);
 void       macset_dad_userfree(void *p);
 DATAOP_RET macset_add(MAC_set *s, const MAC_t *m);
@@ -59,7 +59,7 @@ DATAOP_RET macset_remove(MAC_set *s, const MAC_t *m);
 bool       macset_contains(MAC_set *s, const MAC_t *m);
 void      *macset_get(MAC_set *s, const MAC_t *m);
 bool       macset_empty(MAC_set *s);
-int        macset_count(MAC_set *s);
+unsigned   macset_count(MAC_set *s);
 void       macset_print_all(MAC_set *s, const char *title);
 
 #endif	/* SPP_IPV6_DATA_MAC_H */

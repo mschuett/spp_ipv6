@@ -14,19 +14,20 @@
 #define	SPP_IPV6_DATA_DAD_H
 
 #include <assert.h>
+#include <limits.h>
 #include "spp_ipv6_data_structs.h"
 
 #include "sf_dynamic_preprocessor.h"
 extern DynamicPreprocessorData _dpd;
 
 typedef struct _DAD_set {
-    IP_set *ip;
-    int    count;
-    int    maxcount;
-    size_t mem;
-    size_t maxmem;
-    time_t ts_oldest;
-    time_t ts_newest;
+    IP_set  *ip;
+    unsigned count;
+    unsigned maxcount;
+    size_t   mem;
+    size_t   maxmem;
+    time_t   ts_oldest;
+    time_t   ts_newest;
 } DAD_set;
 
 #define FUTUREDATE 0x7fffffff
@@ -34,7 +35,7 @@ typedef struct _DAD_set {
 /**
  * create DAD state
  */
-static inline DAD_set *dad_create(int count, int maxcount, int memsize)
+static inline DAD_set *dad_create(unsigned count, unsigned maxcount, unsigned memsize)
 {
     DAD_set *s;
     IP_set  *i;
@@ -199,6 +200,9 @@ static inline void dad_expire(DAD_set *s)
     MAC_set *ms;
     time_t ts_mean, ts_new_oldest = FUTUREDATE;
    
+    assert(s->maxcount < UINT_MAX / 95);
+    assert(s->count < UINT_MAX / 100);
+
     // use high-watermark of 95%
     if ((!s->maxcount && !s->maxmem)
        || ((s->maxcount && (s->count * 100 < s->maxcount * 95))
