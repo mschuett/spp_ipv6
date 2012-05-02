@@ -27,7 +27,7 @@
 
 #define MAJOR_VERSION   1
 #define MINOR_VERSION   6
-#define BUILD_VERSION   1
+#define BUILD_VERSION   2
 #define PREPROC_NAME    "IPv6 Preprocessor"
 
 #define DYNAMIC_PREPROC_SETUP   IPv6_Preproc_Setup
