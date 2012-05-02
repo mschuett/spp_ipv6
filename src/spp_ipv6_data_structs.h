@@ -57,7 +57,6 @@ struct IPv6_Statistics {
  * configuration and plugin state.
  */
 struct IPv6_Config {
-    u_int32_t keep_state_duration;  // in sec
     u_int32_t expire_run_interval;  // in sec
     u_int32_t max_routers;
     u_int32_t max_hosts;
@@ -80,6 +79,7 @@ struct IPv6_State {
     DAD_set *unconfirmed;  // ongoing duplicate detections/solicitations
     struct IPv6_Statistics *stat;
     struct IPv6_Config     *config;
+    time_t next_expire;
 } __attribute__((packed));
 
 /*

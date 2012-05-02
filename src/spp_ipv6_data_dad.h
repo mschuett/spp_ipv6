@@ -38,6 +38,7 @@ typedef struct _DAD_set {
 
 static inline int dad_count(DAD_set *s);
 
+#define FUTUREDATE 0x7fffffff
 /**
  * create DAD state
  */
@@ -60,7 +61,7 @@ static inline DAD_set *dad_create(int count, int maxcount, int memsize)
     s->mem       = 0;
     s->maxcount  = maxcount;
     s->maxmem    = memsize;
-    s->ts_oldest = 0x7fffffff;
+    s->ts_oldest = FUTUREDATE;
     s->ts_newest = 0;
     return s;
 }
@@ -143,6 +144,7 @@ static inline DATAOP_RET dad_remove(DAD_set *s, const HOST_t *h)
 {
     DATAOP_RET rc;
     MAC_set *p;
+    IP_t pivot;    
 
     assert(dad_count(s) == s->count);
 
@@ -152,6 +154,11 @@ static inline DATAOP_RET dad_remove(DAD_set *s, const HOST_t *h)
     }
     
     // now *p is our 2nd level MAC_set
+    if (macset_count(p) == 1) {
+        // preserve IP for ipset_remove (after h is free'd)
+        ip_cpy(&pivot, &h->ip);
+    }
+    
     rc = macset_remove(p, &h->mac);
     if (rc == DATA_OK) {
         // do not recalculate s->ts_oldest/ts_newest
@@ -159,7 +166,7 @@ static inline DATAOP_RET dad_remove(DAD_set *s, const HOST_t *h)
         s->mem -= sizeof(HOST_t);
     }
     if (macset_empty(p)) {
-        ipset_remove(s->ip, &h->ip);
+        ipset_remove(s->ip, &pivot);
         s->mem -= sizeof(MAC_set);
     }
     
@@ -192,26 +199,42 @@ static inline int dad_count(DAD_set *s)
 
 /**
  * expire old DAD entries
+ * 
+ * As we cannot use an sfxhash for DAD we need this periodically called
+ * expiration function. Because it requires a full 2-level iteration over
+ * all entries, it is only run when the DAD_set usage exceeds the
+ * high-watermark of 95% (of either entry count or memory usage). 
+ * 
+ * To determine which hosts to purge, the DAD_set keeps the range of
+ * last_adv_ts values. The range is divided and all DAD entries in the
+ * 'first half' are removed.
+ * 
+ * Last but not least the DAD_set entries cannot be removed while iterating
+ * over the set. -- Thus the expirelist is allocated as as dynamic array
+ * to queue the entries for removal.
+ * 
  */
 static inline void dad_expire(DAD_set *s)
 {
     SFGHASH_NODE *n, *o;
     MAC_set *ms;
-    time_t ts_mean;
+    time_t ts_mean, ts_new_oldest = FUTUREDATE;
    
-    // use high-watermark of 90%
+    // use high-watermark of 95%
     if ((!s->maxcount && !s->maxmem)
-       || (s->maxcount && (s->count * 10 < s->maxcount * 9))
-       || (s->maxmem   && (s->mem * 10 < s->maxmem * 9)))
-        return; // nothing to do
+       || ((s->maxcount && (s->count * 100 < s->maxcount * 95))
+         && (s->maxmem  && (s->mem * 100 < s->maxmem * 95)))) {
+        /* debug info
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
+                "dad_expire. count: %d/%d, mem: %d/%d --> nothing to do\n",
+                s->count, s->maxcount, s->mem, s->maxmem););
+         */
+        return;
+    }
     
     // watermark reached, now prune to ~ 50% based on timestamps
     // careful with the data types here, two 32-bit timestamps will overflow:
     ts_mean = ((unsigned long) s->ts_oldest + (unsigned long) s->ts_newest) / 2;
-    
-    printf("dad_expire, oldest: %s, ", ts_str(s->ts_oldest));
-    printf("newest: %s, ", ts_str(s->ts_newest));
-    printf("mean: %s\n", ts_str(ts_mean));
     
     /* we cannot change the hashes while iterating over them --
      * so we have to remember which hosts to remove. */
@@ -225,11 +248,10 @@ static inline void dad_expire(DAD_set *s)
         o = sfghash_findfirst(ms);
         while (o) {
             HOST_t *host = o->data;
-            
-            // printf("check node @%p, ts %s%s\n", host, ts_str(host->last_adv_ts),
-            //        ((host->last_adv_ts <= ts_mean) ? "--> remove" : ""));
             if (host->last_adv_ts <= ts_mean) {
                 expirelist[e_el++] = host;
+            } else if (host->last_adv_ts < ts_new_oldest) {
+                ts_new_oldest = host->last_adv_ts;
             }
             
             if (e_el >= e_size) // just in case
@@ -240,11 +262,35 @@ static inline void dad_expire(DAD_set *s)
             break;
         n = sfghash_findnext(s->ip);
     }
+
+
+    /* debug info
+    {
+        char *old, *mean, *new, *upd;
+        old = strdup(ts_str(s->ts_oldest));
+        mean = strdup(ts_str(ts_mean));
+        new = strdup(ts_str(s->ts_newest));
+        upd = strdup(ts_str(ts_new_oldest));
+
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
+                "dad_expire. count: %d/%d, mem: %d/%d --> expire %d entries\n"
+                "oldest: %s, newest: %s, mean: %s --> updated to %s\n",
+                s->count, s->maxcount, s->mem, s->maxmem,
+                e_el, old, new, mean, upd););
+                
+        free(old);
+        free(mean);
+        free(new);
+        free(upd);
+    }
+    */
     
     for(e_el--; e_el >= 0; e_el--) {
-        dad_remove(s, expirelist[e_el]);
+        DATAOP_RET rc;
+        rc = dad_remove(s, expirelist[e_el]);
+        assert(DATA_OK == rc);
     }
-
+    free(expirelist);
 }
 
 /**
