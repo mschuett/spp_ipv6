@@ -189,9 +189,9 @@ void testDAD_expire() {
     CU_ASSERT_EQUAL(20, s->count);
     CU_ASSERT_EQUAL(20, s->maxcount);
     
-    dad_print_all(s);
+    //dad_print_all(s);
     dad_expire(s);
-    dad_print_all(s);
+    //dad_print_all(s);
     dad_delete(s);
 }
 
@@ -269,16 +269,16 @@ void testDAD_get() {
     for (i = 0; i < EXAMPLE_LEN; i++) {
         ptr = dad_get(s, &h[i]);
         CU_ASSERT_TRUE(host_eq(ptr, &h[i]));
-        CU_ASSERT_TRUE(dad_contains(s, &h[i]));
+        CU_ASSERT_TRUE(dad_contains(s, &h[i], 0));
         ptr = dad_get(s, &g[i]);
         CU_ASSERT_TRUE(host_eq(ptr, &g[i]));
-        CU_ASSERT_TRUE(dad_contains(s, &g[i]));
+        CU_ASSERT_TRUE(dad_contains(s, &g[i], 0));
     }
     
-    CU_ASSERT_TRUE(dad_contains(s, &h[2]));
+    CU_ASSERT_TRUE(dad_contains(s, &h[2], 0));
     rc = dad_remove(s, &h[2]);
     CU_ASSERT_EQUAL(rc, DATA_OK);
-    CU_ASSERT_FALSE(dad_contains(s, &h[2]));
+    CU_ASSERT_FALSE(dad_contains(s, &h[2], 0));
     ptr = dad_get(s, &h[2]);
     CU_ASSERT_PTR_NULL(ptr);
 

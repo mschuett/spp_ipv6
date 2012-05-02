@@ -292,11 +292,34 @@ static inline HOST_t *dad_get(DAD_set *s, const HOST_t *h)
 }
 
 /**
- * check DAD state existance
+ * check for entries with given IP address
  */
-static inline bool dad_contains(DAD_set *s, const HOST_t *h)
+static inline unsigned dad_count_ip(DAD_set *s, const IP_t *i)
 {
-    return NULL != dad_get(s, h);
+    MAC_set *ms;
+
+    ms = ipset_get(s->ip, i);
+    if (!ms)
+        return 0;
+    return macset_count(ms);
+}
+
+
+/**
+ * check DAD state existance
+ * 
+ * if update_ts != 0 then update host's last_adv_ts
+ */
+static inline bool dad_contains(DAD_set *s, const HOST_t *h, time_t update_ts)
+{
+    HOST_t *node;
+    
+    node = dad_get(s, h);
+    if (!node)
+        return false;
+    if (update_ts)
+        node->last_adv_ts = update_ts;
+    return true;
 }
 
 /**
