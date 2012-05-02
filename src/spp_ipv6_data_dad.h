@@ -6,14 +6,8 @@
  * it cannot use the HOST_set type.
  * So it uses a 1st level IP_set, with every entry being a 2nd level MAC_set,
  * containing the HOST_t entries.
- * 
- * So we have no dedicated DAD_t or DAD_set, but still some special functions
- * to access this nested structures.
- * 
- * TODO:
  * The big problem with this approach: we lose the memory management features
- * of sfxhash. -- with these two layers we have to re-implement all entry
- * counting and expiring functions.
+ * of sfxhash. -- So we have to re-implement all entry counting and expiring.
  */
 
 #ifndef SPP_IPV6_DATA_DAD_H
@@ -35,10 +29,8 @@ typedef struct _DAD_set {
     time_t ts_newest;
 } DAD_set;
 
-
-static inline int dad_count(DAD_set *s);
-
 #define FUTUREDATE 0x7fffffff
+
 /**
  * create DAD state
  */
@@ -73,6 +65,15 @@ static inline void dad_delete(DAD_set *s)
 {
     ipset_delete(s->ip);
     free(s);
+}
+
+
+/**
+ * count DAD entries
+ */
+static inline int dad_count(DAD_set *s)
+{
+    return s->count;
 }
 
 /**
@@ -173,28 +174,6 @@ static inline DATAOP_RET dad_remove(DAD_set *s, const HOST_t *h)
     assert(dad_count(s) == s->count);
 
     return rc;
-}
-
-/**
- * count DAD entries
- */
-static inline int dad_count(DAD_set *s)
-{
-    int c = 0;
-    MAC_set *ms;
-    SFGHASH_NODE *n;
-
-    // the old way
-    n = sfghash_findfirst(s->ip);
-    while (n) {
-        ms = n->data;
-        if (ms) {
-            c += macset_count(ms);
-        }
-        n = sfghash_findnext(s->ip);
-    }
-    
-    return c;
 }
 
 /**
