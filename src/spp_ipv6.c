@@ -525,7 +525,12 @@ static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *co
         // check some known options
         switch (option->nd_opt_type) {
         case ND_OPT_PREFIX_INFORMATION:
-            // TODO: could there be two prefixes in a RA msg?
+            // TODO: support multiple prefixes per router
+            if (sfip_is_set(&prefix)) {
+                _dpd.errMsg("got RA with multiple prefix options -- will use only the first one\n");
+                break;
+            }
+            
             prefix_info = (struct nd_opt_prefix_info *) option;
             sfrc = sfip_set_raw(&prefix, &prefix_info->nd_opt_pi_prefix, AF_INET6);
             if (sfrc != SFIP_SUCCESS) {
@@ -550,8 +555,8 @@ static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *co
     }
     
     if (!sfip_is_set(&prefix)) {
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "RA without prefix???\n"););
         // TODO: add alert(?)
+        _dpd.errMsg("got RA without any prefix options -- how unusual...\n");
         return;
     }
     
