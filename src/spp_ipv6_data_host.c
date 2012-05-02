@@ -34,7 +34,7 @@ char *host_str(const HOST_t *host)
     if (host->type.router.prefix && sfip_is_set(host->type.router.prefix)) {
         // for routers:
         snprintf(routerinfo, sizeof(routerinfo),
-                "\n\t-- prefix %s/%d, lifetime %d sec, flags %s%s%s, pref %s",
+                " -- prefix %s/%d, lifetime %d sec, flags %s%s%s, pref %s",
                 sfip_to_str(host->type.router.prefix),
                 sfip_bits(host->type.router.prefix),
                 host->type.router.lifetime,

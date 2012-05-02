@@ -291,13 +291,13 @@ inline static void IPv6_UpdateStats(const SFSnortPacket *p, struct IPv6_Statisti
 inline static void IPv6_Process_Extensions(const SFSnortPacket *p, struct IPv6_State *context __attribute__((unused)))
 {
     uint_fast8_t i;
-    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
-        "IPv6_Process_Extensions() ext num = %d\n",
-        p->num_ip6_extensions););
+    //DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
+    //    "IPv6_Process_Extensions() ext num = %d\n",
+    //    p->num_ip6_extensions););
     for(i = 0; i < p->num_ip6_extensions; i++) {
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
-            "IPv6_Process_Extensions() ext type = %d\n",
-            p->ip6_extensions[i].option_type););
+        //DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
+        //    "IPv6_Process_Extensions() ext type = %d\n",
+        //    p->ip6_extensions[i].option_type););
 
         if (p->ip6_extensions[i].option_type != IPPROTO_HOPOPTS
             && p->ip6_extensions[i].option_type != IPPROTO_DSTOPTS) {
@@ -375,8 +375,8 @@ void IPv6_Process(void *pkt, void *snortcontext __attribute__((unused)))
     sfPolicyUserPolicySet(ipv6_config, _dpd.getRuntimePolicy());
     context = (struct IPv6_State *) sfPolicyUserDataGetCurrent(ipv6_config);
 
-    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "IPv6_Process() called, pkt type = %d\n",
-        (p && p->ip6h) ? p->ip6h->next : 0););
+    //DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "IPv6_Process() called, pkt type = %d\n",
+    //    (p && p->ip6h) ? p->ip6h->next : 0););
 
     context->stat->pkt_seen++;
     /* is the packet and the configuration valid? */
@@ -453,9 +453,9 @@ static void IPv6_Process_ICMPv6(const SFSnortPacket *p, struct IPv6_State *conte
         return;
     }
 
-    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
-        "IPv6_Process_ICMPv6() icmpv6 type %d\n",
-        p->icmp_header->type););
+    //DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN,
+    //    "IPv6_Process_ICMPv6() icmpv6 type %d\n",
+    //    p->icmp_header->type););
             
     /* check if ongoing DAD */
     ip_entry = dad_get(context->unconfirmed, host_set(NULL, mac_from_pkt(p), &(p->ip6h->ip_dst), 0));
@@ -595,7 +595,7 @@ static void IPv6_Process_ICMPv6_RA(const SFSnortPacket *p, struct IPv6_State *co
     
     addrc = hostset_add(context->routers, entry);
     if (addrc == DATA_ADDED) {
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "new IPv6 router advertised:\n%s\n",
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "new IPv6 router advertised: %s\n",
                       host_str(entry)););
 
         // different events, depending on existing whitelist
@@ -622,9 +622,12 @@ static void IPv6_Process_ICMPv6_NA(const SFSnortPacket *p, struct IPv6_State *co
 {
     struct nd_neighbor_advert *na = (struct nd_neighbor_advert *) p->ip_payload;
     SFIP_RET sfrc;
+    DATAOP_RET addrc;
     IP_t target_ip;
     HOST_t *pivot, *dad_entry;
     
+    /* NB: this whole address verification does not check the
+     * address of the msg sender but that of the msg's subject    */
     sfrc = sfip_set_raw(&target_ip, &na->nd_na_target, AF_INET6);
     if (sfrc != SFIP_SUCCESS) {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "sfip_set failed in %s:%d\n", __FILE__, __LINE__););
@@ -633,61 +636,56 @@ static void IPv6_Process_ICMPv6_NA(const SFSnortPacket *p, struct IPv6_State *co
 
     pivot = host_set(NULL, mac_from_pkt(p), &target_ip, ts_from_pkt(p));
     if (hostset_contains(context->hosts, pivot, ts_from_pkt(p))
-        || hostset_contains(context->routers, pivot, ts_from_pkt(p))
-        ) {
-        // legitimate host
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NA from known host %s\n",
+        || hostset_contains(context->routers, pivot, ts_from_pkt(p))) {
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NA for known host %s\n",
                         host_str(pivot)););
         return;
     }
-    // otherwise: new host --> check status
-
+    
+    // otherwise: new host --> DAD
     dad_entry = dad_get(context->unconfirmed, pivot);
-    if (!dad_entry) {
-        /* IP is yet unknown --> put into DAD state */
-        DATAOP_RET addrc;
-        addrc = dad_add(context->unconfirmed, pivot);
-        if (addrc != DATA_ADDED) {
-            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "dad_add failed\n"););
-            return;
-        }
-        /* no DAD info, so simply trust NA
-         *
-         * TODO: this leads to new DoS opportunity
-         *  --> only confirm after some other communication occurs (TCP, UDP or MLD)
-
-        confirm_host(p, context, target_ip);
-         */
-        return;
-    }
-
-    /* current DAD for this IP, now check details  XXX */
-    if (mac_eq(mac_from_pkt(p), &dad_entry->mac)) {
-        /* MAC matches -- same node */
-        
+    if (dad_entry) {
+        /* IP/MAC is already in DAD state */
+        dad_entry->last_adv_ts = ts_from_pkt(p);
         if (dad_entry->type.dad.contacted) {
-            /* host also was contacted by someone -- so it correctly entered the network */
+            /* host also was contacted by someone
+             *  -- so it correctly entered the network */
             confirm_host(context, dad_entry);
         }
-        /* else DAD exists, but still unconfirmed, so do nothing
-         *  (could be result of NA flood/spoof) */
-    } else {
-        /* MAC does not match -- collision
-         * --> check if NA from known Host/Router/MAC whitelist (legitimate) or not (suspicious) */
-        if (hostset_contains(context->hosts, pivot, 0)
-            || hostset_contains(context->routers, pivot, 0)
-            || macset_contains(context->config->host_whitelist, mac_set(NULL, p->ether_header->ether_source))
-            || macset_contains(context->config->router_whitelist, mac_set(NULL, p->ether_header->ether_source))) {
-            // looks legitimate
-            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "DAD collision with host %s\n",
-                          host_str(pivot)););
-            ALERT(SID_ICMP6_DAD_COLLISION);
-        } else {
-            // never seen the 2nd host before --> probably an attack
-            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "DAD DoS from (prob. fake MAC) %s\n",
-                          host_str(pivot)););
-            ALERT(SID_ICMP6_DAD_DOS);
-        }
+        /* else DAD exists, but still unconfirmed,
+         * so do nothing (could be result of NA flood/spoof) */
+        return;
+    }
+    
+    /* IP/MAC combination is yet unknown --> check IP, check MAC and put into DAD state */
+    
+    
+    /* check IP.
+     * 
+     * Problem here: we can detect whether the IP collides with another
+     * ongoing DAD. -- But we cannot check against the context->hosts set,
+     * because the sfxhash does not allow to search by IP.  :-(
+     * Thus we can no longer trigger the ALERT(SID_ICMP6_DAD_DOS);
+     */
+    if (dad_count_ip(context->unconfirmed, &pivot->ip)) {
+        // already have a DAD for the same IP
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NA DAD collision for IP %s\n",
+                        ip_str(&pivot->ip)););
+        ALERT(SID_ICMP6_DAD_COLLISION);
+    }
+    
+    addrc = dad_add(context->unconfirmed, pivot);
+    switch (addrc) {
+        case DATA_ADDED:
+            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NA started by %s\n", host_str(pivot)););
+            ALERT(SID_ICMP6_ND_NEW_DAD);
+            return;
+        case DATA_NOMEM: 
+            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NA dad_add failed, out of memory\n"););
+            return;
+        default:
+            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NA dad_add failed\n"););
+            return;
     }
 }
 
@@ -700,45 +698,51 @@ static void IPv6_Process_ICMPv6_NS(const SFSnortPacket *p, struct IPv6_State *co
     SFIP_RET rc;
     DATAOP_RET addrc;
     IP_t target_ip;
-    HOST_t *ip_entry;
+    HOST_t *pivot, *dad_entry;
 
     // sfip_compare() is confusing, roll my own test for "::"
     if (p->ip6h->ip_src.ip.u6_addr32[0]
      || p->ip6h->ip_src.ip.u6_addr32[1]
      || p->ip6h->ip_src.ip.u6_addr32[2]
      || p->ip6h->ip_src.ip.u6_addr32[3]) {
-        /* src address set --> LLA resolution or reachability check */
+        /* src address set --> LLA resolution or reachability check --> ignore */
         return;
     }
 
+    /* NB: this whole address verification does not check the
+     * address of the msg sender but that of the msg subject    */
     rc = sfip_set_raw(&target_ip, &ns->nd_ns_target, AF_INET6);
     if (rc != SFIP_SUCCESS) {
         DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "sfip_set failed in %s:%d\n", __FILE__, __LINE__););
         return;
     };
 
-    /* else:
-     * unspecified address
-     * --> i.e. new node tries to get address
-     * --> check if already known
-     */
-    ip_entry = hostset_get_by_ipmac(context->hosts, mac_from_pkt(p), &target_ip);
-    if (ip_entry) {
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "Neighbour solicitation from known host\n"););
+    pivot = host_set(NULL, mac_from_pkt(p), &target_ip, ts_from_pkt(p));
+    if (hostset_contains(context->hosts, pivot, 0)
+        || hostset_contains(context->routers, pivot, 0)) {
+        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NS for known host %s\n", host_str(pivot)););
         return;
     }
-
-    /* this is the expected part: the IP is yet unknown --> put into DAD state */
-    ip_entry = host_set(NULL, mac_from_pkt(p), &target_ip, ts_from_pkt(p));
-    addrc = dad_add(context->unconfirmed, ip_entry);
-    if (addrc != DATA_ADDED) {
-        DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "DAD hostset_add failed\n"););
-        return;
+    
+    /* this is the expected part: the IP is yet unknown --> thus in DAD state */
+    dad_entry = host_set(NULL, mac_from_pkt(p), &target_ip, ts_from_pkt(p));
+    addrc = dad_add(context->unconfirmed, dad_entry);
+    
+    switch (addrc) {
+        case DATA_EXISTS:
+            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NS DAD hostset_add, item already existed\n"););
+            return;
+        case DATA_ADDED:
+            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NS DAD started by %s\n", host_str(dad_entry)););
+            ALERT(SID_ICMP6_ND_NEW_DAD);
+            return;
+        case DATA_NOMEM: 
+            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NS DAD hostset_add failed, out of memory\n"););
+            return;
+        default:
+            DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "NS DAD hostset_add failed\n"););
+            return;
     }
-    DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "%s DAD started by %s\n",
-            ts_str(ip_entry->last_adv_ts),
-            host_str(ip_entry)););
-    ALERT(SID_ICMP6_ND_NEW_DAD);
 }
 
 /**
@@ -869,8 +873,8 @@ static void confirm_host(struct IPv6_State *context, const HOST_t *newhost)
     DEBUG_WRAP(DebugMessage(DEBUG_PLUGIN, "new IPv6 host: %s\n",
             host_str(newhost)););
     if (context->config->host_whitelist
-            && !macset_empty(context->config->host_whitelist)
-            && !macset_contains(context->config->host_whitelist, &newhost->mac)) {
+            && !macset_contains(context->config->host_whitelist, &newhost->mac)
+            && !macset_contains(context->config->router_whitelist, &newhost->mac)) {
         ALERT(SID_ICMP6_INVALID_HOST_MAC);
     } else {
         ALERT(SID_ICMP6_ND_NEW_HOST);
