@@ -41,7 +41,7 @@ typedef SFGHASH MAC_set;
 #define MAC_LENGTH (6*sizeof(u_int8_t))
 
 // just for readability and to make future changes easier
-#define mac_from_pkt(p) ((MAC_t *) &(p->ether_header->ether_source))
+#define mac_from_pkt(p) (mac_set(NULL, p->ether_header->ether_source))
 
 bool       mac_eq(const MAC_t *a, const MAC_t *b);
 int        mac_cmp(const MAC_t *a, const MAC_t *b);
