@@ -84,9 +84,4 @@ int        hostset_count(HOST_set *s);
 bool       hostset_empty(HOST_set *s);
 int        hostset_userfree(void *key, void *data);
 
-static inline HOST_t *host_dad_set(HOST_t *h, const IP_t *i, time_t t)
-{
-    return host_set(h, &DAD_MAC, i, t);
-}
-
 #endif	/* SPP_IPV6_DATA_HOST_H */
