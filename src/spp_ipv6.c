@@ -769,17 +769,17 @@ void set_default_config(struct IPv6_Config *config)
                              arg = strtok(NULL, " \t\n\r"); \
                          }
 
-void read_num(char **arg, const char *param, u_int32_t *configptr)
+static inline void read_num(char **arg, const char *param, u_int32_t *configptr)
 {
-    uint_fast32_t minutes;
+    uint_fast32_t input_num;
+    
     *arg = strtok(NULL, " \t\n\r");
-    minutes = (uint_fast32_t) strtoul(*arg, NULL, 10);
+    input_num = (uint_fast32_t) strtoul(*arg, NULL, 10);
     if (errno) {
         _dpd.fatalMsg("  Invalid parameter to %s\n", param);
     }
-    *configptr = 60 * minutes;
-    _dpd.logMsg("  %s = %u minutes = %u secs\n",
-                param, minutes, *configptr);
+    *configptr = input_num;
+    _dpd.logMsg("  %s = %u\n", param, *configptr);
     *arg = strtok(NULL, " \t\n\r");
 }
 
@@ -833,6 +833,12 @@ static void IPv6_Parse(char *args, struct IPv6_Config *config)
             read_num(&arg, "max_hosts", &(config->max_hosts));
         } else if(!strcasecmp("max_unconfirmed", arg)) {
             read_num(&arg, "max_unconfirmed", &(config->max_unconfirmed));
+        } else if(!strcasecmp("mem_routers", arg)) {
+            read_num(&arg, "mem_routers", &(config->mem_routers));
+        } else if(!strcasecmp("mem_hosts", arg)) {
+            read_num(&arg, "mem_hosts", &(config->mem_hosts));
+        } else if(!strcasecmp("mem_unconfirmed", arg)) {
+            read_num(&arg, "mem_unconfirmed", &(config->mem_unconfirmed));
         } else if(!strcasecmp("expire_run", arg)) {
             read_num(&arg, "expire_run", &(config->expire_run_interval));
         } else BIN_OPTION("disable_tracking", config->track_ndp)
