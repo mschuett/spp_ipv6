@@ -87,3 +87,15 @@ The file `etc/ipv6.rules` contain some experimental rules for IPv6 network opera
 These can be tested by including the file in snort.conf, but they should be read
 first because they need some customization (e.g. the DHCPv6 rules should be
 disabled in a DHCPv6-managed network).
+
+
+Development Notes
+=================
+
+My original data structures were designed around `<tree.h>` and sometimes overly
+complicated, that state is preserved in the `using_trees` branch of this
+repository.
+In this master branch I try to a) define a clear interface for all data
+structures and b) to use Snort's hash structures as basic building blocks.
+I'm still not sure this new code is better, but at least it is more readable.
+
