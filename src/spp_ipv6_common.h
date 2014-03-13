@@ -26,7 +26,7 @@
 /**********************************************************************
  ** Includes                                                         **
  **********************************************************************/
-#include "../include/sf_types.h"
+#include "sf_types.h"
 #include <time.h>
 #include <sys/time.h>
 #include <stdlib.h>
