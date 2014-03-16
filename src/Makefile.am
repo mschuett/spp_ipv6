@@ -1,6 +1,8 @@
 ## $Id
 AUTOMAKE_OPTIONS=foreign no-dependencies
 
+AM_CFLAGS=`pkg-config --cflags snort`
+
 libdir = ${exec_prefix}/lib/snort_dynamicpreprocessor
 
 lib_LTLIBRARIES = libsf_ipv6_preproc.la
