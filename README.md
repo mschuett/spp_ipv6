@@ -14,19 +14,21 @@ For more information see
 Compilation
 ===========
 
-The Plugin-only version does not use autoconf, but only a simple Makefile.
+The Plugin builds with automake and autoconf, but the setup is quite primitive.
 
-One can use `make debug` to build a debugging/development version and one
-can set the target directory used for installation.
+It also requires the Snort sources for some header files
+(obtain them e.g. with `apt-get source snort`) and it currently
+uses `pkg-config` to retrieve Snort config options, i.e. it needs
+an installed Snort package.
 
-For all other settings one has to edit the Makefile. Most importantly it
-contains a copy Snort's preprocessor definitions (-DSF_WCHAR -DSUP_IP6 etc.)
--- These have to match those flags used for compiling Snort itself.
+I use these commands to fetch the Snort source code and compile this plugin (on Debian):
 
-A `make` will compile the plugin into the shared library build/lib_ipv6_preproc.so.
-To install the library copy it into Snort's dynamic preprocessor directory
-as configured by dynamicpreprocessor directory in snort.conf,
-or use `make install INSTALLDIR=/home/test/lib`.
+  (cd /tmp; apt-get source snort)
+  automake
+  autoconf
+  ./configure --prefix=/usr CFLAGS="-I/tmp/snort-2.9.2.2/src/dynamic-preprocessors/include"
+  make
+  make install
 
 To test the correct compilation activate the preprocessor (see below) and check if
 it is loaded.
