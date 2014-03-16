@@ -23,12 +23,12 @@ an installed Snort package.
 
 I use these commands to fetch the Snort source code and compile this plugin (on Debian):
 
-  (cd /tmp; apt-get source snort)
-  automake
-  autoconf
-  ./configure --prefix=/usr CFLAGS="-I/tmp/snort-2.9.2.2/src/dynamic-preprocessors/include"
-  make
-  make install
+    (cd /tmp; apt-get source snort)
+    automake
+    autoconf
+    ./configure --prefix=/usr CFLAGS="-I/tmp/snort-2.9.2.2/src/dynamic-preprocessors/include"
+    make
+    make install
 
 To test the correct compilation activate the preprocessor (see below) and check if
 it is loaded.
